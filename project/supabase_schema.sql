@@ -141,12 +141,71 @@ DROP POLICY IF EXISTS "Public Delete Banners" ON storage.objects;
 CREATE POLICY "Public Delete Banners" ON storage.objects FOR DELETE USING (bucket_id = 'banners');
 
 -- 10. Seed initial 5 hero banners with photos, categories, and prices
-INSERT INTO public.banners (title, eyebrow, department, category, price_label, price, cta_text, image, display_order, is_active)
+ALTER TABLE public.banners ADD COLUMN IF NOT EXISTS type TEXT DEFAULT 'hero';
+
+INSERT INTO public.banners (title, eyebrow, department, category, price_label, price, cta_text, image, display_order, is_active, type)
 VALUES
-  ('SANDALS & SNEAKERS', 'Must Have', 'Footwear', 'Casual', 'STARTING AT', '₹499', 'GET YOURS!', '/images/porto_hero.jpg', 1, true),
-  ('WORKWEAR & JACKETS', 'Heavy Duty', 'Jackets', 'Construction Jacket', 'STARTING AT', '₹999', 'EXPLORE JACKETS', '/images/jacket.png', 2, true),
-  ('STEEL TOE SAFETY BOOTS', 'Certified Protection', 'Footwear', 'Safety Shoes', 'STARTING AT', '₹899', 'SHOP SAFETY SHOES', '/images/brown_boots_product.jpg', 3, true),
-  ('STREET & RUNNING SHOES', 'Active Performance', 'Footwear', 'Running', 'STARTING AT', '₹1,199', 'VIEW SNEAKERS', '/images/sport_shoes_lifestyle.jpg', 4, true),
-  ('INDUSTRIAL GUM BOOTS', 'All Weather Tough', 'Footwear', 'Mud Shoes / Gum Boots', 'STARTING AT', '₹649', 'DISCOVER GUM BOOTS', '/images/Leather_image.jpg', 5, true)
+  ('SANDALS & SNEAKERS', 'Must Have', 'Footwear', 'Casual', 'STARTING AT', '₹499', 'GET YOURS!', '/images/porto_hero.jpg', 1, true, 'hero'),
+  ('WORKWEAR & JACKETS', 'Heavy Duty', 'Jackets', 'Construction Jacket', 'STARTING AT', '₹999', 'EXPLORE JACKETS', '/images/jacket.png', 2, true, 'hero'),
+  ('STEEL TOE SAFETY BOOTS', 'Certified Protection', 'Footwear', 'Safety Shoes', 'STARTING AT', '₹899', 'SHOP SAFETY SHOES', '/images/brown_boots_product.jpg', 3, true, 'hero'),
+  ('STREET & RUNNING SHOES', 'Active Performance', 'Footwear', 'Running', 'STARTING AT', '₹1,199', 'VIEW SNEAKERS', '/images/sport_shoes_lifestyle.jpg', 4, true, 'hero'),
+  ('INDUSTRIAL GUM BOOTS', 'All Weather Tough', 'Footwear', 'Mud Shoes / Gum Boots', 'STARTING AT', '₹649', 'DISCOVER GUM BOOTS', '/images/Leather_image.jpg', 5, true, 'hero'),
+  ('THE SEASON OF RAW', 'UP TO', 'Footwear', 'All Products', 'UP TO', '40% OFF', 'EXPLORE DROP', '/images/promo_season_raw.jpg', 99, true, 'promo')
 ON CONFLICT DO NOTHING;
+
+-- 11. Category Cards Table (Shop by Category section)
+CREATE TABLE IF NOT EXISTS public.category_cards (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  image TEXT NOT NULL,
+  department TEXT NOT NULL,
+  category TEXT DEFAULT 'All Products',
+  display_order INTEGER DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE public.category_cards ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public select category_cards" ON public.category_cards;
+CREATE POLICY "Public select category_cards" ON public.category_cards FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Public insert category_cards" ON public.category_cards;
+CREATE POLICY "Public insert category_cards" ON public.category_cards FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Public update category_cards" ON public.category_cards FOR UPDATE USING (true);
+DROP POLICY IF EXISTS "Public delete category_cards" ON public.category_cards FOR DELETE USING (true);
+
+INSERT INTO public.category_cards (id, name, image, department, category, display_order)
+VALUES
+  ('cat-shoes', 'SHOES', '/images/sport_shoes_lifestyle.jpg', 'Footwear', 'All Products', 1),
+  ('cat-jackets', 'JACKETS', '/images/jacket.png', 'Jackets', 'All Products', 2),
+  ('cat-caps', 'CAPS', '/images/category_cap.jpg', 'Accessories', 'Caps', 3),
+  ('cat-sandals', 'SANDALS', '/images/brown_boots_product.jpg', 'Footwear', 'Casual', 4),
+  ('cat-bags', 'BAGS', '/images/image copy.png', 'Accessories', 'All Products', 5),
+  ('cat-accessories', 'ACCESSORIES', '/images/category_accessories.jpg', 'Accessories', 'All Products', 6)
+ON CONFLICT (id) DO UPDATE SET image = EXCLUDED.image, name = EXCLUDED.name;
+
+-- 12. Vibe Cards Table (Our Vibe section)
+CREATE TABLE IF NOT EXISTS public.vibe_cards (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  image TEXT NOT NULL,
+  department TEXT NOT NULL,
+  category TEXT DEFAULT 'All Products',
+  layout TEXT DEFAULT 'standard',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE public.vibe_cards ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public select vibe_cards" ON public.vibe_cards;
+CREATE POLICY "Public select vibe_cards" ON public.vibe_cards FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Public insert vibe_cards" ON public.vibe_cards;
+CREATE POLICY "Public insert vibe_cards" ON public.vibe_cards FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Public update vibe_cards" ON public.vibe_cards FOR UPDATE USING (true);
+DROP POLICY IF EXISTS "Public delete vibe_cards" ON public.vibe_cards FOR DELETE USING (true);
+
+INSERT INTO public.vibe_cards (id, title, image, department, category, layout)
+VALUES
+  ('vibe-outerwear', 'OUTERWEAR', '/images/tool_kjacket.png', 'Jackets', 'All Products', 'tall'),
+  ('vibe-headwear', 'HEADWEAR', '/images/category_cap.jpg', 'Accessories', 'Caps', 'standard'),
+  ('vibe-footwear-1', 'FOOTWEAR', '/images/black_sneakers_product.jpg', 'Footwear', 'All Products', 'standard'),
+  ('vibe-footwear-2', 'FOOTWEAR', '/images/sport_shoes_lifestyle.jpg', 'Footwear', 'All Products', 'standard')
+ON CONFLICT (id) DO UPDATE SET image = EXCLUDED.image, title = EXCLUDED.title;
 

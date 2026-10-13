@@ -42,13 +42,6 @@ export function Header({ dark, setDark, menuOpen, setMenuOpen, cart }: HeaderPro
           >
             Collection
           </Link>
-          <Link
-            to="/admin"
-            className={currentPath === '/admin' ? 'active' : ''}
-            onClick={() => setMenuOpen(false)}
-          >
-            Manage
-          </Link>
         </nav>
 
         <div className="header-actions">

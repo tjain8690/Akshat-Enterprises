@@ -40,5 +40,24 @@ export interface Banner {
   image: string;
   displayOrder?: number;
   isActive?: boolean;
+  type?: 'hero' | 'promo';
   createdAt?: string;
+}
+
+export interface CategoryCard {
+  id: string;
+  name: string;
+  image: string;
+  department: string;
+  category: string;
+  displayOrder: number;
+}
+
+export interface VibeCard {
+  id: string;
+  title: string;
+  image: string;
+  department: string;
+  category?: string;
+  layout?: 'tall' | 'standard';
 }

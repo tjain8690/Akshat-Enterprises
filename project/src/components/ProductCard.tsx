@@ -9,6 +9,7 @@ import {
   Plus,
   ShoppingCart,
   Star,
+  Check,
 } from 'lucide-react';
 import type { Product, CartItem } from '../types';
 import { COLOR_HEX, whatsappLink } from '../constants';
@@ -61,6 +62,8 @@ interface ProductCardProps {
   onAddToCart?: (product: Product, size: string) => void;
   onUpdateQuantity?: (index: number, delta: number) => void;
   onQuickView?: (product: Product) => void;
+  onOpenZoom?: (product: Product) => void;
+  onViewProduct?: (productId: string) => void;
   showDetails?: boolean;
 }
 
@@ -72,6 +75,8 @@ export function ProductCard({
   onAddToCart,
   onUpdateQuantity,
   onQuickView,
+  onOpenZoom,
+  onViewProduct,
   showDetails = true,
 }: ProductCardProps) {
   const navigate = useNavigate();
@@ -111,51 +116,182 @@ export function ProductCard({
     }
   };
 
+  // View button action -> redirects directly to /product-description page
+  const handleViewDescription = (e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    if (onViewProduct) {
+      onViewProduct(product.id);
+    } else {
+      window.history.pushState(null, '', `/product-description?id=${product.id}`);
+      window.dispatchEvent(new PopStateEvent('popstate'));
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  // Card / Image click action -> opens popup container showing clean images and details (Image 2)
+  const handleCardClick = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    // Don't trigger popup if user interacted with a button, link, slider control, or input
+    if (target.closest('button') || target.closest('a') || target.closest('input')) {
+      return;
+    }
+    e.stopPropagation();
+    if (onOpenZoom) {
+      onOpenZoom(product);
+    } else if (onQuickView) {
+      onQuickView(product);
+    }
+  };
+
   return (
-    <article className="porto-product-card" id={`product-${product.id}`}>
-      {/* ── Card Image Frame ── */}
-      <div className="porto-card-media">
-        {/* Badges */}
-        <div className="porto-badge-stack">
-          {discountPercent ? (
-            <span className="porto-badge porto-badge-discount">-{discountPercent}%</span>
-          ) : product.tag ? (
-            <span className="porto-badge porto-badge-tag">{product.tag}</span>
-          ) : null}
+    <article
+      className="ax-card"
+      id={`product-${product.id}`}
+      onClick={handleCardClick}
+      style={{ cursor: 'pointer' }}
+    >
+      {/* ── Card Media & Badges ── */}
+      <div className="ax-card-media">
+        {/* Left Badge: Hot / Discount / Tag */}
+        {discountPercent ? (
+          <span className="ax-card-badge discount">-{discountPercent}%</span>
+        ) : product.tag ? (
+          <span className="ax-card-badge">{product.tag}</span>
+        ) : (
+          <span className="ax-card-badge">Hot</span>
+        )}
+
+        {/* Right Floating Actions Column (Wishlist, Quick View, WhatsApp) - matching reference layout */}
+        <div className="ax-card-media-actions" onClick={(e) => e.stopPropagation()}>
+          {/* 1. Wishlist Heart Button */}
+          <button
+            type="button"
+            className={`ax-card-action-btn wish${isWishlisted ? ' active' : ''}`}
+            onClick={handleWishlistClick}
+            aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+            title="Wishlist"
+          >
+            <Heart
+              size={17}
+              fill={isWishlisted ? '#e5322d' : 'none'}
+              stroke={isWishlisted ? '#e5322d' : 'currentColor'}
+            />
+          </button>
+
+          {/* 2. View Product Description Button (Redirects to /product-description) */}
+          <button
+            type="button"
+            className="ax-card-action-btn view"
+            onClick={handleViewDescription}
+            aria-label="View Product Details"
+            title="View Product Description"
+          >
+            <Eye size={17} />
+          </button>
+
+          {/* 3. WhatsApp Enquiry Button */}
+          <a
+            href={whatsappLink(
+              `Hi Akshat Enterprises, I want to enquire about ${product.name} (${product.price}, Size: ${cardSize}). Please share stock & delivery details.`
+            )}
+            target="_blank"
+            rel="noreferrer"
+            className="ax-card-action-btn whatsapp"
+            onClick={(e) => e.stopPropagation()}
+            aria-label="Enquire on WhatsApp"
+            title="Chat on WhatsApp"
+          >
+            <MessageCircle size={17} />
+          </a>
         </div>
 
-        {/* Wishlist Button */}
-        <button
-          type="button"
-          className={`porto-wishlist-btn${isWishlisted ? ' active' : ''}`}
-          onClick={handleWishlistClick}
-          aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
-          title="Wishlist"
+        {/* Product Image Slider: Clicking opens the clean Preview Popup */}
+        <div
+          className="ax-card-img"
+          onClick={handleCardClick}
+          title="Click to preview photos & angles"
         >
-          <Heart size={15} fill={isWishlisted ? '#f04c32' : 'none'} stroke={isWishlisted ? '#f04c32' : 'currentColor'} />
-        </button>
+          <ProductImageSlider
+            images={[product.image, ...(product.images ?? [])]}
+            name={product.name}
+          />
+        </div>
+      </div>
 
-        {/* Image / Image Slider */}
-        <div className="porto-card-img-wrap">
-          <ProductImageSlider images={[product.image, ...(product.images ?? [])]} name={product.name} />
+      {/* ── Card Body Details ── */}
+      <div className="ax-card-body">
+        {/* Category Subtitle */}
+        <p className="ax-card-cat">{product.department} • {product.category}</p>
+
+        {/* Product Title: Click redirects to /product-description */}
+        <h3
+          className="ax-card-title"
+          onClick={handleViewDescription}
+          style={{ cursor: 'pointer' }}
+          title="View product description"
+        >
+          {product.name}
+        </h3>
+
+        {/* 5-Star Rating */}
+        <div className="ax-card-rating">
+          <div className="stars">
+            {[...Array(5)].map((_, i) => (
+              <Star
+                key={i}
+                size={12}
+                fill="#f59e0b"
+                stroke="#f59e0b"
+              />
+            ))}
+          </div>
+          <span>{product.rating || 4.9} ({product.reviewsCount || 14} reviews)</span>
         </div>
 
-        {/* ── Slide-up Hover Action Bar (Signature Porto style) ── */}
-        <div className="porto-hover-actions">
-          {cartEntry ? (
-            <div className="porto-qty-stepper" onClick={(e) => e.stopPropagation()}>
+        {/* Optional Size Selector */}
+        {showDetails && product.sizes && product.sizes.length > 0 && (
+          <div className="ax-card-sizes">
+            {product.sizes.slice(0, 5).map((s) => (
               <button
                 type="button"
-                className="porto-qty-btn"
+                key={s}
+                className={`ax-size${cardSize === s ? ' active' : ''}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setCardSize(s);
+                }}
+              >
+                {s.replace('IND ', '')}
+              </button>
+            ))}
+            {product.sizes.length > 5 && (
+              <span className="ax-size-more">+{product.sizes.length - 5}</span>
+            )}
+          </div>
+        )}
+
+        {/* Footer: Price on left + Add to Cart Pill Button on right */}
+        <div className="ax-card-foot">
+          <div className="ax-card-price">
+            {product.originalPrice && <del>{product.originalPrice}</del>}
+            <strong>{product.price}</strong>
+          </div>
+
+          {cartEntry ? (
+            <div className="ax-stepper" onClick={(e) => e.stopPropagation()}>
+              <button
+                type="button"
                 onClick={() => onUpdateQuantity && onUpdateQuantity(cartIdx, -1)}
                 aria-label="Decrease quantity"
               >
                 <Minus size={13} />
               </button>
-              <span className="porto-qty-val">{cartEntry.quantity} in Cart</span>
+              <span>{cartEntry.quantity}</span>
               <button
                 type="button"
-                className="porto-qty-btn"
                 onClick={() => onUpdateQuantity && onUpdateQuantity(cartIdx, 1)}
                 aria-label="Increase quantity"
               >
@@ -165,100 +301,13 @@ export function ProductCard({
           ) : (
             <button
               type="button"
-              className={`porto-add-cart-slide-btn${justAdded ? ' added' : ''}`}
+              className={`ax-card-add-btn${justAdded ? ' added' : ''}`}
               onClick={handleAdd}
+              title="Add to Cart"
+              aria-label="Add to Cart"
             >
-              <ShoppingCart size={15} />
-              <span>{justAdded ? 'ADDED TO CART ✓' : 'ADD TO CART'}</span>
-            </button>
-          )}
-
-          {onQuickView && (
-            <button
-              type="button"
-              className="porto-quickview-btn"
-              onClick={(e) => { e.stopPropagation(); onQuickView(product); }}
-              aria-label="Quick View"
-              title="Quick view"
-            >
-              <Eye size={16} />
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* ── Card Body Details ── */}
-      <div className="porto-card-body">
-        {/* Category Header */}
-        <p className="porto-card-category">{product.department} · {product.category}</p>
-
-        {/* Product Title */}
-        <h3 className="porto-card-title">{product.name}</h3>
-
-        {/* Star Rating */}
-        <div className="porto-rating-row" aria-label={`Rating ${product.rating || 5} out of 5 stars`}>
-          <div className="porto-stars">
-            {[...Array(5)].map((_, i) => (
-              <Star
-                key={i}
-                size={12}
-                className="porto-star"
-                fill="#f59e0b"
-                stroke="#f59e0b"
-              />
-            ))}
-          </div>
-          <span className="porto-review-count">({product.reviewsCount || 12})</span>
-        </div>
-
-        {/* Price Row (Strikethrough original price + bold current price) */}
-        <div className="porto-price-row">
-          {product.originalPrice && (
-            <span className="porto-orig-price">{product.originalPrice}</span>
-          )}
-          <strong className="porto-current-price">{product.price}</strong>
-        </div>
-
-        {/* Inline Size Pills */}
-        {showDetails && product.sizes && product.sizes.length > 0 && (
-          <div className="porto-size-pills">
-            {product.sizes.slice(0, 5).map((s) => (
-              <button
-                type="button"
-                key={s}
-                className={`porto-size-pill${cardSize === s ? ' active' : ''}`}
-                onClick={(e) => { e.stopPropagation(); setCardSize(s); }}
-              >
-                {s.replace('IND ', '')}
-              </button>
-            ))}
-            {product.sizes.length > 5 && (
-              <span className="porto-size-more">+{product.sizes.length - 5}</span>
-            )}
-          </div>
-        )}
-
-        {/* Card Footer: WhatsApp Direct Action */}
-        <div className="porto-card-footer">
-          <a
-            className="porto-enquire-link"
-            href={whatsappLink(
-              `Hi Akshat Enterprises, I want to enquire about ${product.name} (${product.price}, Size: ${cardSize}). Please share stock & delivery details.`
-            )}
-            target="_blank"
-            rel="noreferrer"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <MessageCircle size={13} /> Enquire on WhatsApp
-          </a>
-
-          {cartEntry && (
-            <button
-              type="button"
-              className="porto-view-cart-btn"
-              onClick={() => navigate('/cart')}
-            >
-              View Cart →
+              <span>{justAdded ? 'Added ✓' : 'Add to Cart'}</span>
+              {justAdded ? <Check size={15} /> : <ShoppingCart size={15} />}
             </button>
           )}
         </div>

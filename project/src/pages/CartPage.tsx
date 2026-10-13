@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -10,6 +10,9 @@ import {
   ShoppingBag,
   Trash2,
   Truck,
+  Share2,
+  Copy,
+  Check,
 } from 'lucide-react';
 
 export type CartItem = {
@@ -54,6 +57,8 @@ export const CartPage: React.FC<CartPageProps> = ({
     0
   );
 
+  const [copied, setCopied] = useState(false);
+
   const generateWhatsAppOrderLink = () => {
     let message = `*Hi Akshat Enterprises, I would like to place an order from your website:*\n\n`;
     cart.forEach((item, idx) => {
@@ -69,6 +74,39 @@ export const CartPage: React.FC<CartPageProps> = ({
     message += `*Total Order Value:* ${formatPrice(subtotal)} (${totalItemsCount} ${totalItemsCount === 1 ? 'pair' : 'pairs'})\n\n`;
     message += `Please check availability and share delivery/payment details. Thank you!`;
     return `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
+  };
+
+  const generateShareWhatsAppLink = () => {
+    let message = `📦 *MY SAVED FOOTWEAR ORDER LIST*\n`;
+    message += `🏢 Akshat Enterprises Catalog Selection\n`;
+    message += `📅 Date: ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}\n\n`;
+    cart.forEach((item, idx) => {
+      const itemSubtotal = parsePrice(item.price) * item.quantity;
+      message += `${idx + 1}. *${item.name}*\n`;
+      message += `   • Category: ${item.category}\n`;
+      if (item.selectedSize) {
+        message += `   • Size: ${item.selectedSize}\n`;
+      }
+      message += `   • Qty: ${item.quantity} pairs × ${item.price} = ${formatPrice(itemSubtotal)}\n\n`;
+    });
+    message += `━━━━━━━━━━━━━━━━━━━━━\n`;
+    message += `📊 *Total Quantity:* ${totalItemsCount} ${totalItemsCount === 1 ? 'pair' : 'pairs'}\n`;
+    message += `💰 *Total Estimated Value:* ${formatPrice(subtotal)}\n`;
+    message += `━━━━━━━━━━━━━━━━━━━━━\n`;
+    message += `Store: Akshat Enterprises (Shop No. 7, Janta Market, Turbhe, Navi Mumbai)`;
+    return `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
+  };
+
+  const handleCopyCart = () => {
+    let text = `📦 MY SAVED ORDER LIST - Akshat Enterprises\n\n`;
+    cart.forEach((item, idx) => {
+      const itemSubtotal = parsePrice(item.price) * item.quantity;
+      text += `${idx + 1}. ${item.name} | Size: ${item.selectedSize || 'Standard'} | Qty: ${item.quantity} | Total: ${formatPrice(itemSubtotal)}\n`;
+    });
+    text += `\nTotal Pairs: ${totalItemsCount} | Total Value: ${formatPrice(subtotal)}`;
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2500);
   };
 
   return (
@@ -241,17 +279,40 @@ export const CartPage: React.FC<CartPageProps> = ({
                 </div>
               </div>
 
-              <a
-                className="button button-dark cart-checkout-btn"
-                href={generateWhatsAppOrderLink()}
-                target="_blank"
-                rel="noreferrer"
-              >
-                <MessageCircle size={18} /> Confirm Order on WhatsApp
-              </a>
+              <div className="cart-checkout-actions-block">
+                <a
+                  className="button button-dark cart-checkout-btn"
+                  href={generateWhatsAppOrderLink()}
+                  target="_blank"
+                  rel="noreferrer"
+                  title="Send complete order breakdown to Akshat Enterprises (8690041886)"
+                >
+                  <MessageCircle size={18} /> Confirm Order with Store (WhatsApp)
+                </a>
+
+                <a
+                  className="button button-light cart-share-wa-btn"
+                  href={generateShareWhatsAppLink()}
+                  target="_blank"
+                  rel="noreferrer"
+                  title="Opens WhatsApp so you can send/save to 'Message Yourself' or your own contacts"
+                >
+                  <Share2 size={16} /> Save / Message List to My WhatsApp
+                </a>
+
+                <button
+                  type="button"
+                  className="cart-copy-list-btn"
+                  onClick={handleCopyCart}
+                  title="Copy full text order summary"
+                >
+                  {copied ? <Check size={15} /> : <Copy size={15} />}
+                  <span>{copied ? 'Copied to Clipboard!' : 'Copy Order Text to Clipboard'}</span>
+                </button>
+              </div>
 
               <p className="cart-checkout-note">
-                Orders are verified directly with our Turbhe store team. Sizing, payment, and delivery pin-codes will be confirmed on WhatsApp.
+                Direct wholesale confirmation via WhatsApp with Turbhe store team. Sizing, payment, and delivery pin-codes will be confirmed in chat.
               </p>
             </div>
           </div>

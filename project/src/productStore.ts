@@ -1,12 +1,12 @@
 import { supabase, isSupabaseConfigured } from './supabase';
-import type { Product, Banner } from './types';
+import type { Product, Banner, CategoryCard, VibeCard } from './types';
 
-const LS_KEY = 'akshat_products_v2';
+const LS_KEY = 'akshat_products_v3';
 const LS_BANNERS_KEY = 'akshat_banners_v2';
 const BUCKET = 'shoes';
 const BANNERS_BUCKET = 'banners';
 
-// ─── Seed products (shown when no data exists yet) ───────────────────────────
+// ─── Seed products (all with 4 distinct angle photos) ───────────────────────────
 export const SEED_PRODUCTS: Product[] = [
   {
     id: 'seed-1',
@@ -17,6 +17,11 @@ export const SEED_PRODUCTS: Product[] = [
     originalPrice: '₹1,899',
     priceValue: 1299,
     image: '/images/brown_boots_product.jpg',
+    images: [
+      '/images/sport_shoes_lifestyle.jpg',
+      '/images/black_sneakers_product.jpg',
+      '/images/Leather_image.jpg',
+    ],
     tag: 'Bestseller',
     rating: 5,
     reviewsCount: 24,
@@ -33,6 +38,11 @@ export const SEED_PRODUCTS: Product[] = [
     originalPrice: '₹2,299',
     priceValue: 1599,
     image: '/images/black_sneakers_product.jpg',
+    images: [
+      '/images/sport_shoes_lifestyle.jpg',
+      '/images/brown_boots_product.jpg',
+      '/images/Leather_image.jpg',
+    ],
     tag: 'New drop',
     rating: 5,
     reviewsCount: 38,
@@ -49,6 +59,11 @@ export const SEED_PRODUCTS: Product[] = [
     originalPrice: '₹1,499',
     priceValue: 999,
     image: '/images/brown_boots_product.jpg',
+    images: [
+      '/images/Leather_image.jpg',
+      '/images/black_sneakers_product.jpg',
+      '/images/sport_shoes_lifestyle.jpg',
+    ],
     tag: 'Workwear',
     rating: 4.8,
     reviewsCount: 52,
@@ -65,6 +80,11 @@ export const SEED_PRODUCTS: Product[] = [
     originalPrice: '₹1,699',
     priceValue: 1199,
     image: '/images/sport_shoes_lifestyle.jpg',
+    images: [
+      '/images/black_sneakers_product.jpg',
+      '/images/brown_boots_product.jpg',
+      '/images/Leather_image.jpg',
+    ],
     rating: 4.9,
     reviewsCount: 19,
     sizes: ['IND 6', 'IND 7', 'IND 8', 'IND 9', 'IND 10', 'IND 11', 'IND 12'],
@@ -80,6 +100,11 @@ export const SEED_PRODUCTS: Product[] = [
     originalPrice: '₹1,299',
     priceValue: 899,
     image: '/images/Leather_image.jpg',
+    images: [
+      '/images/brown_boots_product.jpg',
+      '/images/sport_shoes_lifestyle.jpg',
+      '/images/black_sneakers_product.jpg',
+    ],
     tag: 'Sale',
     rating: 4.7,
     reviewsCount: 41,
@@ -96,6 +121,11 @@ export const SEED_PRODUCTS: Product[] = [
     originalPrice: '₹2,499',
     priceValue: 1799,
     image: '/images/black_sneakers_product.jpg',
+    images: [
+      '/images/sport_shoes_lifestyle.jpg',
+      '/images/Leather_image.jpg',
+      '/images/brown_boots_product.jpg',
+    ],
     rating: 5,
     reviewsCount: 16,
     sizes: ['IND 7', 'IND 8', 'IND 9', 'IND 10', 'IND 11'],
@@ -132,6 +162,11 @@ export const SEED_PRODUCTS: Product[] = [
     originalPrice: '₹899',
     priceValue: 649,
     image: '/images/Leather_image.jpg',
+    images: [
+      '/images/brown_boots_product.jpg',
+      '/images/black_sneakers_product.jpg',
+      '/images/sport_shoes_lifestyle.jpg',
+    ],
     tag: 'Workwear',
     rating: 4.8,
     reviewsCount: 29,
@@ -273,6 +308,49 @@ export async function deleteProduct(id: string): Promise<void> {
   writeLocalStorage(existing.filter((p) => p.id !== id));
 }
 
+/** Update an existing product (stock, price, name, etc.) */
+export async function updateProduct(
+  id: string,
+  updates: Partial<Product>
+): Promise<Product | null> {
+  if (isSupabaseConfigured && supabase && !id.startsWith('seed-') && !id.startsWith('local-')) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const payload: any = {};
+    if (updates.name !== undefined) payload.name = updates.name;
+    if (updates.department !== undefined) payload.department = updates.department;
+    if (updates.category !== undefined) payload.category = updates.category;
+    if (updates.price !== undefined) payload.price = updates.price;
+    if (updates.originalPrice !== undefined) payload.original_price = updates.originalPrice;
+    if (updates.priceValue !== undefined) payload.price_value = updates.priceValue;
+    if (updates.stock !== undefined) payload.stock = updates.stock;
+    if (updates.tag !== undefined) payload.tag = updates.tag;
+    if (updates.sizes !== undefined) payload.sizes = updates.sizes;
+    if (updates.colors !== undefined) payload.colors = updates.colors;
+    if (updates.image !== undefined) payload.image = updates.image;
+    if (updates.images !== undefined) payload.images = updates.images;
+
+    const { data, error } = await supabase
+      .from('products')
+      .update(payload)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw new Error(`Update failed: ${error.message}`);
+    return rowToProduct(data);
+  }
+
+  // Update in localStorage (works for seed and local products)
+  const existing = readLocalStorage();
+  const idx = existing.findIndex((p) => p.id === id);
+  if (idx !== -1) {
+    existing[idx] = { ...existing[idx], ...updates };
+    writeLocalStorage(existing);
+    return existing[idx];
+  }
+  return null;
+}
+
 /** Subscribe to live Supabase changes on the products table. */
 export function subscribeToProducts(onUpdate: () => void): (() => void) | null {
   if (isSupabaseConfigured && supabase) {
@@ -300,6 +378,21 @@ export function subscribeToProducts(onUpdate: () => void): (() => void) | null {
 
 // ─── BANNERS STORE IMPLEMENTATION ─────────────────────────────────────────────
 
+export const SEED_PROMO_BANNER: Banner = {
+  id: 'seed-banner-promo',
+  title: 'THE SEASON OF RAW',
+  eyebrow: 'UP TO',
+  department: 'Footwear',
+  category: 'All Products',
+  priceLabel: 'UP TO',
+  price: '40% OFF',
+  ctaText: 'EXPLORE DROP',
+  image: '/images/promo_season_raw.jpg',
+  displayOrder: 99,
+  isActive: true,
+  type: 'promo',
+};
+
 export const SEED_BANNERS: Banner[] = [
   {
     id: 'seed-banner-1',
@@ -313,6 +406,7 @@ export const SEED_BANNERS: Banner[] = [
     image: '/images/porto_hero.jpg',
     displayOrder: 1,
     isActive: true,
+    type: 'hero',
   },
   {
     id: 'seed-banner-2',
@@ -326,6 +420,7 @@ export const SEED_BANNERS: Banner[] = [
     image: '/images/jacket.png',
     displayOrder: 2,
     isActive: true,
+    type: 'hero',
   },
   {
     id: 'seed-banner-3',
@@ -339,6 +434,7 @@ export const SEED_BANNERS: Banner[] = [
     image: '/images/brown_boots_product.jpg',
     displayOrder: 3,
     isActive: true,
+    type: 'hero',
   },
   {
     id: 'seed-banner-4',
@@ -352,6 +448,7 @@ export const SEED_BANNERS: Banner[] = [
     image: '/images/sport_shoes_lifestyle.jpg',
     displayOrder: 4,
     isActive: true,
+    type: 'hero',
   },
   {
     id: 'seed-banner-5',
@@ -365,7 +462,9 @@ export const SEED_BANNERS: Banner[] = [
     image: '/images/Leather_image.jpg',
     displayOrder: 5,
     isActive: true,
+    type: 'hero',
   },
+  SEED_PROMO_BANNER,
 ];
 
 function readBannersLocalStorage(): Banner[] {
@@ -373,7 +472,15 @@ function readBannersLocalStorage(): Banner[] {
     const raw = localStorage.getItem(LS_BANNERS_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        // Ensure promo banner is present
+        const hasPromo = parsed.some((b: Banner) => b.type === 'promo' || b.id === 'seed-banner-promo');
+        if (!hasPromo) {
+          parsed.push(SEED_PROMO_BANNER);
+          localStorage.setItem(LS_BANNERS_KEY, JSON.stringify(parsed));
+        }
+        return parsed;
+      }
     }
   } catch { /* ignore */ }
   localStorage.setItem(LS_BANNERS_KEY, JSON.stringify(SEED_BANNERS));
@@ -400,6 +507,7 @@ function rowToBanner(row: any): Banner {
     image: row.image,
     displayOrder: typeof row.display_order === 'number' ? row.display_order : 0,
     isActive: row.is_active !== false,
+    type: row.type ?? (row.title?.includes('SEASON OF RAW') || String(row.id).includes('promo') ? 'promo' : 'hero'),
     createdAt: row.created_at,
   };
 }
@@ -417,7 +525,11 @@ export async function loadBanners(): Promise<Banner[]> {
       return readBannersLocalStorage();
     }
     if (data && data.length > 0) {
-      return data.map(rowToBanner);
+      const list = data.map(rowToBanner);
+      if (!list.some((b: Banner) => b.type === 'promo' || b.id === 'seed-banner-promo')) {
+        list.push(SEED_PROMO_BANNER);
+      }
+      return list;
     }
     return SEED_BANNERS;
   }
@@ -465,7 +577,8 @@ export async function saveBanner(
   banner: Omit<Banner, 'createdAt' | 'id'> & { id?: string }
 ): Promise<Banner> {
   if (isSupabaseConfigured && supabase) {
-    const payload = {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const payload: any = {
       title: banner.title,
       eyebrow: banner.eyebrow ?? 'Must Have',
       department: banner.department ?? 'Footwear',
@@ -476,25 +589,55 @@ export async function saveBanner(
       image: banner.image,
       display_order: banner.displayOrder ?? 0,
       is_active: banner.isActive !== false,
+      type: banner.type ?? 'hero',
     };
 
     if (banner.id && !banner.id.startsWith('seed-') && !banner.id.startsWith('local-')) {
-      const { data, error } = await supabase
-        .from('banners')
-        .update(payload)
-        .eq('id', banner.id)
-        .select()
-        .single();
-      if (error) throw new Error(`Save banner failed: ${error.message}`);
-      return rowToBanner(data);
+      try {
+        const { data, error } = await supabase
+          .from('banners')
+          .update(payload)
+          .eq('id', banner.id)
+          .select()
+          .single();
+        if (error) throw error;
+        return rowToBanner(data);
+      } catch (err: any) {
+        if (err?.message?.includes('type') || err?.code === '42703') {
+          delete payload.type;
+          const { data, error } = await supabase
+            .from('banners')
+            .update(payload)
+            .eq('id', banner.id)
+            .select()
+            .single();
+          if (error) throw new Error(`Save banner failed: ${error.message}`);
+          return { ...rowToBanner(data), type: banner.type ?? 'hero' };
+        }
+        throw new Error(`Save banner failed: ${err.message}`);
+      }
     } else {
-      const { data, error } = await supabase
-        .from('banners')
-        .insert(payload)
-        .select()
-        .single();
-      if (error) throw new Error(`Insert banner failed: ${error.message}`);
-      return rowToBanner(data);
+      try {
+        const { data, error } = await supabase
+          .from('banners')
+          .insert(payload)
+          .select()
+          .single();
+        if (error) throw error;
+        return rowToBanner(data);
+      } catch (err: any) {
+        if (err?.message?.includes('type') || err?.code === '42703') {
+          delete payload.type;
+          const { data, error } = await supabase
+            .from('banners')
+            .insert(payload)
+            .select()
+            .single();
+          if (error) throw new Error(`Insert banner failed: ${error.message}`);
+          return { ...rowToBanner(data), type: banner.type ?? 'hero' };
+        }
+        throw new Error(`Insert banner failed: ${err.message}`);
+      }
     }
   }
 
@@ -521,6 +664,7 @@ export async function saveBanner(
     image: banner.image || '/images/porto_hero.jpg',
     displayOrder: banner.displayOrder ?? (existing.length + 1),
     isActive: banner.isActive !== false,
+    type: banner.type ?? 'hero',
     createdAt: new Date().toISOString(),
   };
   writeBannersLocalStorage([...existing, newBanner]);
@@ -561,5 +705,234 @@ export function subscribeToBanners(onUpdate: () => void): (() => void) | null {
     }
   }
   return null;
+}
+
+// ─── SHOP BY CATEGORY CARDS STORE ─────────────────────────────────────────────
+
+const LS_CATEGORY_CARDS_KEY = 'akshat_category_cards_v1';
+const LS_VIBE_CARDS_KEY = 'akshat_vibe_cards_v1';
+
+export const SEED_CATEGORY_CARDS: CategoryCard[] = [
+  {
+    id: 'cat-shoes',
+    name: 'SHOES',
+    image: '/images/sport_shoes_lifestyle.jpg',
+    department: 'Footwear',
+    category: 'All Products',
+    displayOrder: 1,
+  },
+  {
+    id: 'cat-jackets',
+    name: 'JACKETS',
+    image: '/images/jacket.png',
+    department: 'Jackets',
+    category: 'All Products',
+    displayOrder: 2,
+  },
+  {
+    id: 'cat-caps',
+    name: 'CAPS',
+    image: '/images/category_cap.jpg',
+    department: 'Accessories',
+    category: 'Caps',
+    displayOrder: 3,
+  },
+  {
+    id: 'cat-sandals',
+    name: 'SANDALS',
+    image: '/images/brown_boots_product.jpg',
+    department: 'Footwear',
+    category: 'Casual',
+    displayOrder: 4,
+  },
+  {
+    id: 'cat-bags',
+    name: 'BAGS',
+    image: '/images/image copy.png',
+    department: 'Accessories',
+    category: 'All Products',
+    displayOrder: 5,
+  },
+  {
+    id: 'cat-accessories',
+    name: 'ACCESSORIES',
+    image: '/images/category_accessories.jpg',
+    department: 'Accessories',
+    category: 'All Products',
+    displayOrder: 6,
+  },
+];
+
+export const SEED_VIBE_CARDS: VibeCard[] = [
+  {
+    id: 'vibe-outerwear',
+    title: 'OUTERWEAR',
+    image: '/images/tool_kjacket.png',
+    department: 'Jackets',
+    category: 'All Products',
+    layout: 'tall',
+  },
+  {
+    id: 'vibe-headwear',
+    title: 'HEADWEAR',
+    image: '/images/category_cap.jpg',
+    department: 'Accessories',
+    category: 'Caps',
+    layout: 'standard',
+  },
+  {
+    id: 'vibe-footwear-1',
+    title: 'FOOTWEAR',
+    image: '/images/black_sneakers_product.jpg',
+    department: 'Footwear',
+    category: 'All Products',
+    layout: 'standard',
+  },
+  {
+    id: 'vibe-footwear-2',
+    title: 'FOOTWEAR',
+    image: '/images/sport_shoes_lifestyle.jpg',
+    department: 'Footwear',
+    category: 'All Products',
+    layout: 'standard',
+  },
+];
+
+function readCategoryCardsLocalStorage(): CategoryCard[] {
+  try {
+    const raw = localStorage.getItem(LS_CATEGORY_CARDS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch { /* ignore */ }
+  localStorage.setItem(LS_CATEGORY_CARDS_KEY, JSON.stringify(SEED_CATEGORY_CARDS));
+  return SEED_CATEGORY_CARDS;
+}
+
+function writeCategoryCardsLocalStorage(cards: CategoryCard[]): void {
+  try {
+    localStorage.setItem(LS_CATEGORY_CARDS_KEY, JSON.stringify(cards));
+  } catch { /* ignore */ }
+}
+
+/** Load all Shop by Category cards from Supabase or localStorage. */
+export async function loadCategoryCards(): Promise<CategoryCard[]> {
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('category_cards')
+        .select('*')
+        .order('display_order', { ascending: true });
+
+      if (!error && data && data.length > 0) {
+        return data.map((row: any) => ({
+          id: String(row.id),
+          name: row.name,
+          image: row.image,
+          department: row.department,
+          category: row.category ?? 'All Products',
+          displayOrder: typeof row.display_order === 'number' ? row.display_order : 0,
+        }));
+      }
+    } catch {
+      // fallback to local storage
+    }
+  }
+  return readCategoryCardsLocalStorage();
+}
+
+/** Save or update a category card in Supabase or localStorage. */
+export async function saveCategoryCard(card: CategoryCard): Promise<CategoryCard> {
+  if (isSupabaseConfigured && supabase) {
+    try {
+      await supabase.from('category_cards').upsert({
+        id: card.id,
+        name: card.name,
+        image: card.image,
+        department: card.department,
+        category: card.category,
+        display_order: card.displayOrder,
+      });
+    } catch (e) {
+      console.warn('Supabase category_cards save failed, using local storage:', e);
+    }
+  }
+  const existing = readCategoryCardsLocalStorage();
+  const idx = existing.findIndex((c) => c.id === card.id);
+  if (idx !== -1) {
+    existing[idx] = { ...existing[idx], ...card };
+  } else {
+    existing.push(card);
+  }
+  writeCategoryCardsLocalStorage(existing);
+  return card;
+}
+
+function readVibeCardsLocalStorage(): VibeCard[] {
+  try {
+    const raw = localStorage.getItem(LS_VIBE_CARDS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch { /* ignore */ }
+  localStorage.setItem(LS_VIBE_CARDS_KEY, JSON.stringify(SEED_VIBE_CARDS));
+  return SEED_VIBE_CARDS;
+}
+
+function writeVibeCardsLocalStorage(cards: VibeCard[]): void {
+  try {
+    localStorage.setItem(LS_VIBE_CARDS_KEY, JSON.stringify(cards));
+  } catch { /* ignore */ }
+}
+
+/** Load all Our Vibe cards from Supabase or localStorage. */
+export async function loadVibeCards(): Promise<VibeCard[]> {
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data, error } = await supabase.from('vibe_cards').select('*');
+      if (!error && data && data.length > 0) {
+        return data.map((row: any) => ({
+          id: String(row.id),
+          title: row.title,
+          image: row.image,
+          department: row.department,
+          category: row.category ?? 'All Products',
+          layout: row.layout ?? 'standard',
+        }));
+      }
+    } catch {
+      // fallback
+    }
+  }
+  return readVibeCardsLocalStorage();
+}
+
+/** Save or update a vibe card in Supabase or localStorage. */
+export async function saveVibeCard(card: VibeCard): Promise<VibeCard> {
+  if (isSupabaseConfigured && supabase) {
+    try {
+      await supabase.from('vibe_cards').upsert({
+        id: card.id,
+        title: card.title,
+        image: card.image,
+        department: card.department,
+        category: card.category,
+        layout: card.layout,
+      });
+    } catch (e) {
+      console.warn('Supabase vibe_cards save failed, using local storage:', e);
+    }
+  }
+  const existing = readVibeCardsLocalStorage();
+  const idx = existing.findIndex((v) => v.id === card.id);
+  if (idx !== -1) {
+    existing[idx] = { ...existing[idx], ...card };
+  } else {
+    existing.push(card);
+  }
+  writeVibeCardsLocalStorage(existing);
+  return card;
 }
 

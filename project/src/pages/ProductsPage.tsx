@@ -5,6 +5,7 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Eye,
   MessageCircle,
   Minus,
   Package,
@@ -17,6 +18,7 @@ import {
 import type { Product, CartItem } from '../types';
 import { COLOR_HEX, whatsappLink } from '../constants';
 import { ProductImageSlider } from '../components/ProductCard';
+import { ProductDetailModal } from '../components/ProductDetailModal';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const DEPARTMENTS_FILTER = [
@@ -93,6 +95,7 @@ export function ProductsPage({
 
   // Per-card selected size
   const [cardSizes, setCardSizes] = useState<Record<string, string>>({});
+  const [detailProduct, setDetailProduct] = useState<Product | null>(null);
 
   // ─── Derived state ──────────────────────────────────────────────────────────
   // Dynamic categories from database products
@@ -484,12 +487,17 @@ export function ProductsPage({
 
                 return (
                   <article className="product-card" key={product.id}>
-                    <div className="product-image">
+                    <div
+                      className="product-image"
+                      onClick={() => setDetailProduct(product)}
+                      style={{ cursor: 'pointer' }}
+                    >
                       {product.tag && <span className="product-tag">{product.tag}</span>}
                       <ProductImageSlider images={[product.image, ...(product.images ?? [])]} name={product.name} />
                       <button
                         className="product-arrow"
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation();
                           if (!cartEntry) {
                             handleAddToCart(product);
                           }
@@ -503,7 +511,12 @@ export function ProductsPage({
 
                     <div className="product-info">
                       <div>
-                        <h3>{product.name}</h3>
+                        <h3
+                          onClick={() => setDetailProduct(product)}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          {product.name}
+                        </h3>
                         <span>{product.category}</span>
                       </div>
                       <strong>{product.price}</strong>
@@ -541,6 +554,16 @@ export function ProductsPage({
                     )}
 
                     <div className="product-card-actions">
+                      <button
+                        type="button"
+                        className="enquire-link"
+                        onClick={() => setDetailProduct(product)}
+                        style={{ background: 'rgba(0,0,0,0.04)', fontWeight: 700, cursor: 'pointer' }}
+                        title="View 4 Angle Photos"
+                      >
+                        <Eye size={13} /> View
+                      </button>
+
                       {cartEntry ? (
                         <div className="product-qty-stepper">
                           <button
@@ -613,6 +636,18 @@ export function ProductsPage({
             </div>
           </div>
         </div>
+      )}
+
+      {/* ── PRODUCT DETAIL VIEW MODAL (4 Angles & PulseSneaks Style Design) ── */}
+      {detailProduct && (
+        <ProductDetailModal
+          product={detailProduct}
+          onClose={() => setDetailProduct(null)}
+          onAddToCart={(product, size) => {
+            onAddToCart(product, size);
+            setDetailProduct(null);
+          }}
+        />
       )}
     </div>
   );

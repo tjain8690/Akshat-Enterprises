@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import {
   ArrowUpRight,
   ChevronDown,
@@ -26,19 +26,29 @@ import {
   Check,
   CreditCard,
   Headphones,
+  User,
+  Share2,
 } from 'lucide-react';
 import { CartPage, CartItem } from './pages/CartPage';
+import { WishlistPage } from './pages/WishlistPage';
 import { AdminPage } from './pages/AdminPage';
 import { ProductsPage } from './pages/ProductsPage';
 import { ProductCard } from './components/ProductCard';
+import { ProductDetailModal } from './components/ProductDetailModal';
+import { ProductZoomModal } from './components/ProductZoomModal';
+import { ProductDescriptionPage } from './pages/ProductDescriptionPage';
 import {
   loadProducts,
   subscribeToProducts,
   loadBanners,
   subscribeToBanners,
   SEED_BANNERS,
+  loadCategoryCards,
+  loadVibeCards,
+  SEED_CATEGORY_CARDS,
+  SEED_VIBE_CARDS,
 } from './productStore';
-import type { Banner } from './types';
+import type { Banner, CategoryCard, VibeCard } from './types';
 import {
   whatsappNumber,
   secondPhone,
@@ -73,7 +83,56 @@ export default function App() {
   const [activeCategory, setActiveCategory] = useState('All Products');
   const [menuOpen, setMenuOpen] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
-  const [currentPath, setCurrentPath] = useState<string>(() => window.location.pathname);
+
+  // Secret Owner Authorization State (Blocks direct /admin access from URL)
+  const [isOwnerUnlocked, setIsOwnerUnlocked] = useState<boolean>(() => {
+    if (typeof window !== 'undefined' && window.location.pathname === '/bharat') {
+      return true;
+    }
+    try {
+      return sessionStorage.getItem('ae_owner_unlocked') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const [currentPath, setCurrentPath] = useState<string>(() => {
+    const p = window.location.pathname;
+    if (p === '/bharat') {
+      try {
+        sessionStorage.setItem('ae_owner_unlocked', 'true');
+      } catch {}
+      return '/bharat';
+    }
+    if (p === '/admin') {
+      window.history.replaceState(null, '', '/');
+      return '/';
+    }
+    return p;
+  });
+
+  // Watch for URL navigation changes: /bharat unlocks admin, /admin redirects to /
+  useEffect(() => {
+    const handlePopState = () => {
+      const p = window.location.pathname;
+      if (p === '/bharat') {
+        try {
+          sessionStorage.setItem('ae_owner_unlocked', 'true');
+        } catch {}
+        setIsOwnerUnlocked(true);
+        setCurrentPath('/bharat');
+        return;
+      }
+      if (p === '/admin') {
+        window.history.replaceState(null, '', '/');
+        setCurrentPath('/');
+        return;
+      }
+      setCurrentPath(p);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   // Search input in header
   const [searchQuery, setSearchQuery] = useState('');
@@ -85,24 +144,85 @@ export default function App() {
 
   // Mini-cart drawer
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
+  const [wishlistDropdownOpen, setWishlistDropdownOpen] = useState(false);
+
+  // Product Zoom Magnifier Modal (Opens on Card Image Click)
+  const [zoomModalProduct, setZoomModalProduct] = useState<Product | null>(null);
 
   // Category sidebar popup drawer (slides left to right)
   const [categorySidebarOpen, setCategorySidebarOpen] = useState(false);
 
+  // Secret Admin Opener (Routes to /bharat)
+  const openOwnerAdmin = () => {
+    try {
+      sessionStorage.setItem('ae_owner_unlocked', 'true');
+    } catch {}
+    setIsOwnerUnlocked(true);
+    window.history.pushState(null, '', '/bharat');
+    setCurrentPath('/bharat');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setCartDrawerOpen(false);
+    setMenuOpen(false);
+  };
+
+  const closeOwnerAdmin = () => {
+    try {
+      sessionStorage.removeItem('ae_owner_unlocked');
+    } catch {}
+    setIsOwnerUnlocked(false);
+    window.history.pushState(null, '', '/');
+    setCurrentPath('/');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Normal Logo Click returns to store home
+  const handleLogoClick = () => {
+    navigateTo('/');
+  };
+
   // Hero Banners (dynamic from database table 'banners')
   const [banners, setBanners] = useState<Banner[]>(SEED_BANNERS);
+
+  // Shop by Category & Our Vibe cards (dynamic from database)
+  const [categoryCards, setCategoryCards] = useState<CategoryCard[]>(SEED_CATEGORY_CARDS);
+  const [vibeCards, setVibeCards] = useState<VibeCard[]>(SEED_VIBE_CARDS);
+
+  // Filter hero banners from banners list (excluding promo banner)
+  const heroBanners = useMemo(() => {
+    const list = banners.filter((b) => b.type !== 'promo');
+    return list.length > 0 ? list : banners;
+  }, [banners]);
+
+  // The Season of Raw promo banner
+  const promoBanner = useMemo(() => {
+    return (
+      banners.find((b) => b.type === 'promo') || {
+        id: 'seed-banner-promo',
+        title: 'THE SEASON OF RAW',
+        eyebrow: 'UP TO',
+        department: 'Footwear',
+        category: 'All Products',
+        priceLabel: 'UP TO',
+        price: '40% OFF',
+        ctaText: 'EXPLORE DROP',
+        image: '/images/promo_season_raw.jpg',
+        isActive: true,
+        type: 'promo',
+      }
+    );
+  }, [banners]);
 
   // Hero Ad Cards Slider index
   const [currentHeroSlide, setCurrentHeroSlide] = useState(0);
 
-  // Continuous auto-slider: runs every 3s continuously and NEVER stops or freezes on button click or scroll!
+  // Continuous auto-slider: runs every 2s continuously and NEVER stops or freezes on button click or scroll!
   useEffect(() => {
-    if (banners.length <= 1) return;
+    if (heroBanners.length <= 1) return;
     const interval = setInterval(() => {
-      setCurrentHeroSlide((prev) => (prev + 1) % banners.length);
-    }, 3000);
+      setCurrentHeroSlide((prev) => (prev + 1) % heroBanners.length);
+    }, 2000);
     return () => clearInterval(interval);
-  }, [banners.length]);
+  }, [heroBanners.length]);
 
 
   // Toast notification
@@ -170,6 +290,40 @@ export default function App() {
     };
   }, []);
 
+  // Callbacks to refresh database data
+  const refreshCategoryCards = useCallback(() => {
+    loadCategoryCards().then((data) => {
+      if (data && data.length > 0) setCategoryCards(data);
+    });
+  }, []);
+
+  const refreshVibeCards = useCallback(() => {
+    loadVibeCards().then((data) => {
+      if (data && data.length > 0) setVibeCards(data);
+    });
+  }, []);
+
+  const refreshBanners = useCallback(() => {
+    loadBanners().then((data) => {
+      if (data && data.length > 0) setBanners(data);
+    });
+  }, []);
+
+  // Load category cards and vibe cards from database on mount
+  useEffect(() => {
+    loadCategoryCards()
+      .then((data) => {
+        if (data && data.length > 0) setCategoryCards(data);
+      })
+      .catch((err) => console.warn('Category cards load warning:', err));
+
+    loadVibeCards()
+      .then((data) => {
+        if (data && data.length > 0) setVibeCards(data);
+      })
+      .catch((err) => console.warn('Vibe cards load warning:', err));
+  }, []);
+
   // Save cart
   useEffect(() => {
     try {
@@ -188,16 +342,28 @@ export default function App() {
     }
   }, [wishlist]);
 
-  // Client-side router listener
+  // Close search bar on Escape key
   useEffect(() => {
-    const handlePopState = () => {
-      setCurrentPath(window.location.pathname);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && searchOpen) {
+        setSearchOpen(false);
+      }
     };
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [searchOpen]);
 
   const navigateTo = (path: string) => {
+    if (path === '/bharat') {
+      try {
+        sessionStorage.setItem('ae_owner_unlocked', 'true');
+      } catch {}
+      setIsOwnerUnlocked(true);
+    } else if (path === '/admin') {
+      window.history.replaceState(null, '', '/');
+      setCurrentPath('/');
+      return;
+    }
     window.history.pushState(null, '', path);
     setCurrentPath(path);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -298,6 +464,11 @@ export default function App() {
     showToast('Product removed');
   };
 
+  const handleUpdateProduct = (updated: Product) => {
+    setProducts((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+    showToast(`Updated "${updated.name}" stock`);
+  };
+
   // ─── Wishlist handlers ────────────────────────────────────────────────────
   const handleToggleWishlist = (productId: string) => {
     setWishlist((prev) => {
@@ -308,9 +479,15 @@ export default function App() {
     });
   };
 
+  const handleClearWishlist = () => {
+    setWishlist([]);
+    showToast('Wishlist cleared');
+  };
+
   // ─── Cart handlers ────────────────────────────────────────────────────────
-  const handleAddToCart = (product: Product, size?: string) => {
+  const handleAddToCart = (product: Product, size?: string, quantity: number = 1) => {
     const chosenSize = size || product.sizes?.[0] || 'IND 8';
+    const qtyToAdd = Math.max(1, quantity || 1);
     setCart((prevCart) => {
       const existingIdx = prevCart.findIndex(
         (item) => item.name === product.name && item.selectedSize === chosenSize
@@ -319,7 +496,7 @@ export default function App() {
         const updated = [...prevCart];
         updated[existingIdx] = {
           ...updated[existingIdx],
-          quantity: updated[existingIdx].quantity + 1,
+          quantity: updated[existingIdx].quantity + qtyToAdd,
         };
         return updated;
       }
@@ -331,12 +508,12 @@ export default function App() {
           price: product.price,
           image: product.image,
           tag: product.tag,
-          quantity: 1,
+          quantity: qtyToAdd,
           selectedSize: chosenSize,
         },
       ];
     });
-    showToast(`Added "${product.name}" (${chosenSize}) to cart!`);
+    showToast(`Added ${qtyToAdd > 1 ? `${qtyToAdd}x ` : ''}"${product.name}" (${chosenSize}) to cart!`);
     setCartDrawerOpen(true);
   };
 
@@ -467,6 +644,42 @@ export default function App() {
     return products.filter((p) => p.tag === 'Bestseller' || p.rating === 5).slice(0, 4);
   }, [products]);
 
+  // Wishlist products memo
+  const wishlistProducts = useMemo(() => {
+    return products.filter((p) => wishlist.includes(p.id));
+  }, [products, wishlist]);
+
+  // Check if current route is Product Description Page
+  const isProductDetailPage =
+    currentPath.startsWith('/product-description') ||
+    (currentPath.startsWith('/product') && currentPath !== '/products' && !currentPath.startsWith('/products/'));
+
+  const detailProductId = useMemo(() => {
+    if (!isProductDetailPage) return null;
+    try {
+      const search = window.location.search;
+      if (search) {
+        const sp = new URLSearchParams(search);
+        const qId = sp.get('id');
+        if (qId) return qId;
+      }
+      const parts = currentPath.split('/');
+      if (parts.length >= 3 && parts[2]) {
+        return decodeURIComponent(parts[2]);
+      }
+    } catch {}
+    return null;
+  }, [currentPath, isProductDetailPage]);
+
+  const currentDetailProduct = useMemo(() => {
+    if (!isProductDetailPage) return null;
+    if (detailProductId) {
+      const found = products.find((p) => p.id === detailProductId);
+      if (found) return found;
+    }
+    return products[0] || null;
+  }, [isProductDetailPage, detailProductId, products]);
+
   // Quick View opener
   const handleOpenQuickView = (product: Product) => {
     setQuickViewProduct(product);
@@ -506,7 +719,7 @@ export default function App() {
   }, [categorySidebarOpen, cartDrawerOpen, quickViewProduct]);
 
   return (
-    <div className={`app porto-theme${dark ? ' dark' : ''}${categorySidebarOpen ? ' porto-sidebar-active' : ''}`}>
+    <div className={`app ax-app${dark ? ' dark' : ''}${categorySidebarOpen ? ' porto-sidebar-active' : ''}`}>
       {/* ── Toast Notification ── */}
       {toastMsg && (
         <div className="porto-toast" role="status">
@@ -515,244 +728,311 @@ export default function App() {
         </div>
       )}
 
-      {/* ── Top Announcement Bar (Porto Signature Style) ── */}
-      <div className="porto-top-bar">
-        <div className="porto-top-bar-inner">
-          <div className="porto-top-announcement">
-            <span className="porto-top-pill">SPECIAL OFFER</span>
-            <span>Get 10% OFF at Akshat Enterprises Selection — Shop Direct from Turbhe Store!</span>
-          </div>
-          <div className="porto-top-links">
-            <a href="tel:9892228186" className="porto-top-link">
-              <Phone size={12} /> 98922 28186
-            </a>
-            <span className="porto-top-divider">|</span>
-            <button
-              type="button"
-              className="porto-top-link"
-              onClick={() => {
-                if (wishlist.length > 0) {
-                  showToast(`You have ${wishlist.length} item${wishlist.length > 1 ? 's' : ''} in wishlist`);
-                } else {
-                  showToast('Your wishlist is empty');
-                }
-              }}
-            >
-              <Heart size={12} /> Wishlist ({wishlist.length})
-            </button>
-            <span className="porto-top-divider">|</span>
-            <button
-              type="button"
-              className="porto-top-link"
-              onClick={() => navigateTo('/cart')}
-            >
-              <ShoppingCart size={12} /> Cart ({totalCartCount})
-            </button>
-            <span className="porto-top-divider">|</span>
-            <span className="porto-top-currency">INR (₹)</span>
-          </div>
-        </div>
+      {/* ── Top Announcement Bar (APEX Signature Style) ── */}
+      <div className="ax-topbar">
+        <p>
+          <strong>FREE SHIPPING</strong> ON ALL ORDERS <span>|</span> EASY RETURNS
+        </p>
+        <a href={`tel:${secondPhone}`} className="ax-topbar-phone ax-hide-sm">
+          <Phone size={12} /> Turbhe Store: 98922 28186
+        </a>
       </div>
 
-      {/* ── Main Site Header & Navbar (Porto Luxury Style) ── */}
-      <header className="porto-header">
-        <div className="porto-header-inner">
-          {/* Brand Logo & Mobile Categories Trigger */}
-          <div className="porto-brand-group">
+      {/* ── Main Site Header & Navbar (APEX Design) ── */}
+      <header className={`ax-header${menuOpen ? ' menu-open' : ''}`}>
+        <div className="ax-header-inner">
+          {/* Brand Logo & Mobile Menu Toggle */}
+          <div className="ax-header-left">
             <button
               type="button"
-              className="porto-mobile-cat-btn"
-              onClick={() => setCategorySidebarOpen(true)}
-              aria-label="Open categories sidebar"
-              title="Categories"
-            >
-              <Menu size={20} />
-            </button>
-            <a
-              className="porto-brand"
-              href="#top"
-              onClick={(e) => {
-                e.preventDefault();
-                navigateTo('/');
-              }}
-              aria-label="Akshat Enterprises Home"
-            >
-              <img src="/AE-logo.png" alt="Akshat Enterprises" className="porto-brand-logo-img" />
-            </a>
-          </div>
-
-          {/* Center Search Bar with workable submit & auto-scroll */}
-          <form className="porto-header-search" onSubmit={handleSearchSubmit}>
-            <div className="porto-search-wrap">
-              <input
-                type="text"
-                className="porto-search-input"
-                placeholder="Search sandals, safety shoes, jackets, workwear…"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    handleSearchSubmit(e);
-                  }
-                }}
-                aria-label="Search catalog"
-              />
-              {searchQuery ? (
-                <button
-                  type="button"
-                  className="porto-search-btn-clear"
-                  onClick={() => setSearchQuery('')}
-                  aria-label="Clear search"
-                >
-                  <X size={15} />
-                </button>
-              ) : null}
-              <button
-                type="submit"
-                className="porto-search-btn-submit"
-                aria-label="Search and scroll to category"
-                title="Search products"
-              >
-                <Search size={16} />
-              </button>
-            </div>
-          </form>
-
-          {/* Header Action Icons */}
-          <div className="porto-header-actions">
-            {/* Wishlist Icon */}
-            <button
-              type="button"
-              className="porto-action-icon-btn"
-              onClick={() => {
-                showToast(`Wishlist contains ${wishlist.length} item${wishlist.length === 1 ? '' : 's'}`);
-              }}
-              aria-label="View wishlist"
-              title="Wishlist"
-            >
-              <Heart size={20} fill={wishlist.length > 0 ? '#f04c32' : 'none'} stroke={wishlist.length > 0 ? '#f04c32' : 'currentColor'} />
-              {wishlist.length > 0 && <span className="porto-badge-count">{wishlist.length}</span>}
-            </button>
-
-            {/* Shopping Cart Pill Button (Porto style) */}
-            <button
-              type="button"
-              className="porto-cart-pill-btn"
-              onClick={() => setCartDrawerOpen(true)}
-              aria-label="Open Shopping Cart"
-              title="Shopping cart"
-            >
-              <div className="porto-cart-icon-wrap">
-                <ShoppingCart size={19} />
-                {totalCartCount > 0 && <span className="porto-badge-count">{totalCartCount}</span>}
-              </div>
-              <div className="porto-cart-text">
-                <span className="porto-cart-label">CART</span>
-                <strong className="porto-cart-amount">₹{cartTotalPrice.toLocaleString('en-IN')}</strong>
-              </div>
-            </button>
-
-            {/* Theme Toggle Button */}
-            <button
-              type="button"
-              className="porto-theme-toggle-btn"
-              onClick={() => setDark(!dark)}
-              aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
-              title="Toggle theme"
-            >
-              {dark ? <Sun size={19} /> : <Moon size={19} />}
-            </button>
-
-            {/* Mobile Menu Toggle */}
-            <button
-              type="button"
-              className="porto-menu-toggle-btn"
+              className="ax-icon-btn ax-menu-toggle"
               onClick={() => setMenuOpen(!menuOpen)}
               aria-label="Toggle navigation menu"
             >
-              {menuOpen ? <X size={22} /> : <Menu size={22} />}
+              {menuOpen ? <X size={20} /> : <Menu size={20} />}
+            </button>
+            <a
+              className="ax-logo"
+              href="#top"
+              onClick={(e) => {
+                e.preventDefault();
+                handleLogoClick();
+              }}
+              aria-label="APEX by Akshat Enterprises"
+            >
+              <div className="ax-brand-group">
+                <span className="ax-brand-title">
+                  APE<span className="ax-brand-x">X</span>
+                </span>
+                <img
+                  src="/AE-logo.png"
+                  alt="Akshat Enterprises"
+                  className="ax-brand-ae"
+                />
+              </div>
+            </a>
+          </div>
+
+          {/* Center Navigation Links (Exact from Design) */}
+          <nav className={`ax-nav${menuOpen ? ' open' : ''}`}>
+            <button
+              type="button"
+              className={`ax-nav-link${activeDept === 'all' && activeCategory === 'All Products' && currentPath === '/' ? ' active' : ''}`}
+              onClick={() => {
+                setActiveDept('all');
+                setActiveCategory('All Products');
+                navigateTo('/');
+                setMenuOpen(false);
+              }}
+            >
+              Shop
+            </button>
+            <button
+              type="button"
+              className={`ax-nav-link${activeCategory === 'New Arrivals' ? ' active' : ''}`}
+              onClick={() => {
+                setActiveDept('all');
+                setActiveCategory('All Products');
+                navigateTo('/');
+                setMenuOpen(false);
+                setTimeout(() => {
+                  const el = document.getElementById('trending-drops') || document.getElementById('featured');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                }, 50);
+              }}
+            >
+              New Arrivals
+            </button>
+            <button
+              type="button"
+              className={`ax-nav-link${activeDept === 'Footwear' && activeCategory !== 'Casual' ? ' active' : ''}`}
+              onClick={() => {
+                setActiveDept('Footwear');
+                setActiveCategory('All Products');
+                navigateTo('/');
+                setMenuOpen(false);
+                setTimeout(() => {
+                  const el = document.getElementById('trending-drops') || document.getElementById('featured');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                }, 50);
+              }}
+            >
+              Shoes
+            </button>
+            <button
+              type="button"
+              className={`ax-nav-link${activeDept === 'Jackets' ? ' active' : ''}`}
+              onClick={() => {
+                setActiveDept('Jackets');
+                setActiveCategory('All Products');
+                navigateTo('/');
+                setMenuOpen(false);
+                setTimeout(() => {
+                  const el = document.getElementById('trending-drops') || document.getElementById('featured');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                }, 50);
+              }}
+            >
+              Jackets
+            </button>
+            <button
+              type="button"
+              className={`ax-nav-link${activeCategory === 'Caps' || (activeDept === 'Accessories' && activeCategory === 'Caps') ? ' active' : ''}`}
+              onClick={() => {
+                setActiveDept('Accessories');
+                setActiveCategory('Caps');
+                navigateTo('/');
+                setMenuOpen(false);
+                setTimeout(() => {
+                  const el = document.getElementById('trending-drops') || document.getElementById('featured');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                }, 50);
+              }}
+            >
+              Caps
+            </button>
+            <button
+              type="button"
+              className={`ax-nav-link${activeCategory === 'Casual' ? ' active' : ''}`}
+              onClick={() => {
+                setActiveDept('Footwear');
+                setActiveCategory('Casual');
+                navigateTo('/');
+                setMenuOpen(false);
+                setTimeout(() => {
+                  const el = document.getElementById('trending-drops') || document.getElementById('featured');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                }, 50);
+              }}
+            >
+              Sandals
+            </button>
+          </nav>
+
+          {/* Right Header Action Icons */}
+          <div className="ax-header-actions">
+            {/* Search Slot (Expands to the left into available space without hiding icons) */}
+            <div className="ax-search-slot">
+              {!searchOpen ? (
+                <button
+                  type="button"
+                  className="ax-icon-btn"
+                  onClick={() => setSearchOpen(true)}
+                  aria-label="Toggle search catalog"
+                  title="Search catalog"
+                >
+                  <Search size={19} />
+                </button>
+              ) : (
+                <form
+                  className="ax-search-slide-form"
+                  onSubmit={(e) => {
+                    handleSearchSubmit(e);
+                    setSearchOpen(false);
+                  }}
+                >
+                  <div className="ax-search-pill">
+                    <input
+                      type="text"
+                      placeholder="Search..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      autoFocus
+                    />
+                    <button
+                      type="submit"
+                      className="ax-search-pill-submit"
+                      title="Search"
+                      aria-label="Search"
+                    >
+                      <Search size={15} />
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    className="ax-search-pill-close"
+                    onClick={() => setSearchOpen(false)}
+                    title="Close search"
+                    aria-label="Close search"
+                  >
+                    <X size={17} />
+                  </button>
+                </form>
+              )}
+            </div>
+
+            {/* Wishlist Icon with Dropdown on Hover */}
+            <div
+              className="ax-wishlist-hover-wrapper"
+              onMouseEnter={() => setWishlistDropdownOpen(true)}
+              onMouseLeave={() => setWishlistDropdownOpen(false)}
+            >
+              <button
+                type="button"
+                className={`ax-icon-btn${currentPath === '/wishlist' ? ' active' : ''}`}
+                onClick={() => {
+                  setWishlistDropdownOpen(false);
+                  navigateTo('/wishlist');
+                }}
+                aria-label="View wishlist"
+                title="My Wishlist"
+              >
+                <Heart
+                  size={19}
+                  fill={wishlist.length > 0 ? '#e5322d' : 'none'}
+                  stroke={wishlist.length > 0 ? '#e5322d' : 'currentColor'}
+                />
+                {wishlist.length > 0 && <span className="ax-badge">{wishlist.length}</span>}
+              </button>
+
+              {/* Wishlist Hover Dropdown (shows up to 4 items and View More button) */}
+              {wishlistDropdownOpen && (
+                <div className="ax-wishlist-dropdown">
+                  <div className="ax-wishlist-dd-header">
+                    <span className="ax-wishlist-dd-title">
+                      <Heart size={14} fill="#e5322d" stroke="#e5322d" />
+                      Wishlist
+                    </span>
+                    <span className="ax-wishlist-dd-count">
+                      {wishlistProducts.length} {wishlistProducts.length === 1 ? 'item' : 'items'}
+                    </span>
+                  </div>
+
+                  {wishlistProducts.length === 0 ? (
+                    <div className="ax-wishlist-dd-empty">
+                      <Heart size={24} stroke="#94a3b8" />
+                      <span>Your wishlist is empty</span>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="ax-wishlist-dd-items">
+                        {wishlistProducts.slice(0, 4).map((item) => (
+                          <div
+                            key={item.id}
+                            className="ax-wishlist-dd-row"
+                            onClick={() => {
+                              setWishlistDropdownOpen(false);
+                              navigateTo(`/product-description?id=${item.id}`);
+                            }}
+                          >
+                            <img
+                              src={item.image || '/images/safety_shoes.jpg'}
+                              alt={item.name}
+                              className="ax-wishlist-dd-thumb"
+                            />
+                            <div className="ax-wishlist-dd-info">
+                              <span className="ax-wishlist-dd-name" title={item.name}>
+                                {item.name}
+                              </span>
+                              <span className="ax-wishlist-dd-price">
+                                {item.price ? (item.price.startsWith('₹') ? item.price : `₹${item.price}`) : '₹999'}
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              className="ax-wishlist-dd-del-btn"
+                              title="Remove from wishlist"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleToggleWishlist(item.id);
+                              }}
+                            >
+                              <X size={14} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+
+                      <button
+                        type="button"
+                        className="ax-wishlist-dd-more-btn"
+                        onClick={() => {
+                          setWishlistDropdownOpen(false);
+                          navigateTo('/wishlist');
+                        }}
+                      >
+                        View More {wishlistProducts.length > 4 ? `(${wishlistProducts.length})` : ''} &rarr;
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Shopping Cart Icon with Count Badge */}
+            <button
+              type="button"
+              className="ax-icon-btn"
+              onClick={() => setCartDrawerOpen(true)}
+              aria-label="Open shopping cart"
+              title="Shopping cart"
+            >
+              <ShoppingCart size={19} />
+              {totalCartCount > 0 && <span className="ax-badge accent">{totalCartCount}</span>}
             </button>
           </div>
         </div>
-
-        {/* ── Secondary Navigation Bar (Shop, Collection, Workwear, About) ── */}
-        <nav className={`porto-nav-strip${menuOpen ? ' open' : ''}`} aria-label="Main navigation">
-          <div className="porto-nav-inner">
-            {/* Sidebar trigger button on navbar left side */}
-            <button
-              type="button"
-              className="porto-nav-categories-btn"
-              onClick={() => setCategorySidebarOpen(true)}
-              aria-label="Open categories sidebar"
-              title="Categories"
-            >
-              <Menu size={18} />
-            </button>
-
-            <button
-              type="button"
-              className={`porto-nav-link${currentPath === '/' && !searchQuery ? ' active' : ''}`}
-              onClick={() => navigateTo('/')}
-            >
-              Home
-            </button>
-            <button
-              type="button"
-              className={`porto-nav-link${currentPath === '/products' ? ' active' : ''}`}
-              onClick={() => navigateTo('/products')}
-            >
-              All Products &amp; Catalog
-            </button>
-            <button
-              type="button"
-              className="porto-nav-link"
-              onClick={() => {
-                setActiveDept('Footwear');
-                navigateTo('/');
-                setTimeout(() => document.getElementById('featured')?.scrollIntoView({ behavior: 'smooth' }), 50);
-              }}
-            >
-              Footwear &amp; Sneakers
-            </button>
-            <button
-              type="button"
-              className="porto-nav-link"
-              onClick={() => {
-                setActiveDept('Footwear');
-                setActiveCategory('Safety Shoes');
-                navigateTo('/');
-                setTimeout(() => document.getElementById('featured')?.scrollIntoView({ behavior: 'smooth' }), 50);
-              }}
-            >
-              Safety Footwear
-            </button>
-            <button
-              type="button"
-              className="porto-nav-link"
-              onClick={() => {
-                setActiveDept('Jackets');
-                navigateTo('/');
-                setTimeout(() => document.getElementById('featured')?.scrollIntoView({ behavior: 'smooth' }), 50);
-              }}
-            >
-              Jackets &amp; Workwear
-            </button>
-            <button
-              type="button"
-              className={`porto-nav-link${currentPath === '/cart' ? ' active' : ''}`}
-              onClick={() => navigateTo('/cart')}
-            >
-              Cart ({totalCartCount})
-            </button>
-            <button
-              type="button"
-              className={`porto-nav-link${currentPath === '/admin' ? ' active' : ''}`}
-              onClick={() => navigateTo('/admin')}
-            >
-              Admin / Upload
-            </button>
-          </div>
-        </nav>
       </header>
 
       {/* ── Main App Content ── */}
@@ -766,14 +1046,32 @@ export default function App() {
             onNavigateHome={() => navigateTo('/')}
             whatsappNumber={whatsappNumber}
           />
-        ) : currentPath === '/admin' ? (
+        ) : currentPath === '/wishlist' ? (
+          <WishlistPage
+            wishlist={wishlist}
+            products={products}
+            cart={cart}
+            onAddToCart={handleAddToCart}
+            onToggleWishlist={handleToggleWishlist}
+            onClearWishlist={handleClearWishlist}
+            onNavigateHome={() => navigateTo('/')}
+            onQuickView={handleOpenQuickView}
+            dark={dark}
+          />
+        ) : currentPath === '/bharat' ? (
           <AdminPage
             products={products}
             banners={banners}
+            categoryCards={categoryCards}
+            vibeCards={vibeCards}
+            onBannersChange={refreshBanners}
+            onCategoryCardsChange={refreshCategoryCards}
+            onVibeCardsChange={refreshVibeCards}
             dark={dark}
             onPublish={handlePublishProduct}
             onDelete={handleDeleteProduct}
-            onNavigateHome={() => navigateTo('/')}
+            onUpdate={handleUpdateProduct}
+            onNavigateHome={closeOwnerAdmin}
           />
         ) : currentPath === '/products' ? (
           <ProductsPage
@@ -785,591 +1083,529 @@ export default function App() {
             onNavigateHome={() => navigateTo('/')}
             navigateTo={navigateTo}
           />
+        ) : isProductDetailPage && currentDetailProduct ? (
+          <ProductDescriptionPage
+            product={currentDetailProduct}
+            allProducts={products}
+            cart={cart}
+            wishlist={wishlist}
+            onAddToCart={handleAddToCart}
+            onToggleWishlist={handleToggleWishlist}
+            onUpdateQuantity={handleUpdateQuantity}
+            onNavigateHome={() => navigateTo('/')}
+            navigateTo={navigateTo}
+            onOpenZoomModal={(prod) => setZoomModalProduct(prod)}
+            dark={dark}
+          />
         ) : (
           <>
-            {/* ── HERO SECTION (Auto-sliding 5 Ad Cards with Different Categories from DB) ── */}
-            <section className="porto-hero-section">
-              <div className="porto-hero-container">
-                <div className="porto-hero-slider-wrapper">
-                  {/* Slider Track moving from right to left */}
+            {/* ── HERO BANNER SLIDER (Auto-slides Every 2s · Never pauses on click) ── */}
+            <section className="ax-hero">
+              <div
+                className="ax-hero-track"
+                style={{ transform: `translateX(-${currentHeroSlide * 100}%)` }}
+              >
+                {heroBanners.map((slide, idx) => (
                   <div
-                    className="porto-hero-slider-track"
-                    style={{ transform: `translateX(-${currentHeroSlide * 100}%)` }}
+                    key={slide.id}
+                    className={`ax-hero-slide${idx === currentHeroSlide ? ' active' : ''}`}
                   >
-                    {banners.map((slide) => (
-                      <div key={slide.id} className="porto-hero-slide-item">
-                        <div className="porto-hero-banner">
-                          <div className="porto-hero-image-wrap">
-                            <img
-                              src={slide.image}
-                              alt={slide.title}
-                              className="porto-hero-image"
-                            />
-                          </div>
-
-                          <div className="porto-hero-copy">
-                            <span className="porto-hero-dept-chip">{slide.department} • {slide.category}</span>
-                            <p className="porto-script-accent">{slide.eyebrow}</p>
-                            <h1 className="porto-hero-title">{slide.title}</h1>
-                            <div className="porto-hero-price-tag">
-                              <span>{slide.priceLabel}</span>
-                              <strong>{slide.price}</strong>
-                            </div>
-                            <button
-                              type="button"
-                              className="porto-hero-cta-btn"
-                              onClick={() => {
-                                setActiveDept(slide.department);
-                                if (slide.category && slide.category !== 'All Products') {
-                                  setActiveCategory(slide.category);
-                                }
-                                const el = document.getElementById('featured');
-                                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                              }}
-                            >
-                              {slide.ctaText}
-                            </button>
-                          </div>
+                    <div className="ax-hero-inner">
+                      {/* Left Copy */}
+                      <div className="ax-hero-copy">
+                        <span className="ax-hero-chip">
+                          {slide.category || 'NEW DROP'} · UNCOMPROMISING
+                        </span>
+                        <h1 className="ax-hero-title">
+                          {slide.title || 'STEP INTO YOUR ELEMENT'}
+                        </h1>
+                        <p className="ax-hero-sub">
+                          {slide.eyebrow || 'Uncompromising street gear. Built for the bold.'}
+                        </p>
+                        <div className="ax-hero-actions">
+                          <button
+                            type="button"
+                            className="ax-btn ax-btn-dark"
+                            onClick={() => {
+                              setActiveDept(slide.department || 'all');
+                              if (slide.category && slide.category !== 'All Products') {
+                                setActiveCategory(slide.category);
+                              }
+                              const el = document.getElementById('trending-drops') || document.getElementById('featured');
+                              if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }}
+                          >
+                            {slide.ctaText || 'SHOP THE DROP'} <ChevronRight size={16} />
+                          </button>
+                          <button
+                            type="button"
+                            className="ax-btn ax-btn-outline"
+                            onClick={() => {
+                              const el = document.getElementById('categories');
+                              if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }}
+                          >
+                            EXPLORE NOW
+                          </button>
                         </div>
                       </div>
-                    ))}
+
+                      {/* Right Visual with clean borderless banner frame */}
+                      <div className="ax-hero-visual">
+                        <div className="ax-hero-frame">
+                          <img
+                            src={slide.image || '/images/porto_hero.jpg'}
+                            alt={slide.title || 'Street gear hero'}
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
+                ))}
+              </div>
 
-                  {/* Manual Prev / Next Navigation Arrows */}
-                  <button
-                    type="button"
-                    className="porto-hero-arrow prev"
-                    onClick={() => setCurrentHeroSlide((prev) => (prev - 1 + banners.length) % banners.length)}
-                    aria-label="Previous Slide"
-                  >
-                    <ChevronLeft size={22} />
-                  </button>
-                  <button
-                    type="button"
-                    className="porto-hero-arrow next"
-                    onClick={() => setCurrentHeroSlide((prev) => (prev + 1) % banners.length)}
-                    aria-label="Next Slide"
-                  >
-                    <ChevronRight size={22} />
-                  </button>
+              {/* Left / Right Nav Arrows */}
+              <button
+                type="button"
+                className="ax-hero-arrow prev"
+                onClick={() => setCurrentHeroSlide((prev) => (prev - 1 + heroBanners.length) % heroBanners.length)}
+                aria-label="Previous Slide"
+              >
+                <ChevronLeft size={22} />
+              </button>
+              <button
+                type="button"
+                className="ax-hero-arrow next"
+                onClick={() => setCurrentHeroSlide((prev) => (prev + 1) % heroBanners.length)}
+                aria-label="Next Slide"
+              >
+                <ChevronRight size={22} />
+              </button>
 
-                  {/* Slide Indicator Dots */}
-                  <div className="porto-hero-dots">
-                    {banners.map((s, idx) => (
+              {/* Slide Indicator Dots at bottom right */}
+              <div className="ax-hero-dots">
+                {heroBanners.map((s, idx) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    className={`ax-hero-dot${idx === currentHeroSlide ? ' active' : ''}`}
+                    onClick={() => setCurrentHeroSlide(idx)}
+                    aria-label={`Slide ${idx + 1}`}
+                  />
+                ))}
+              </div>
+            </section>
+
+            {/* ── SHOP BY CATEGORY (Dynamic from Database) ── */}
+            <section id="categories" className="ax-section">
+              <div className="ax-container">
+                <div className="ax-section-head">
+                  <h2 className="ax-section-title caps">SHOP BY CATEGORY</h2>
+                </div>
+
+                <div className="ax-cat-grid">
+                  {categoryCards.map((cat) => {
+                    const isActive =
+                      (cat.name === 'SHOES' && activeDept === 'Footwear' && activeCategory !== 'Casual') ||
+                      (cat.name === 'JACKETS' && activeDept === 'Jackets') ||
+                      (cat.name === 'CAPS' && activeCategory === 'Caps') ||
+                      (cat.name === 'SANDALS' && activeCategory === 'Casual') ||
+                      (cat.name === 'BAGS' && activeCategory === 'Bags') ||
+                      (cat.name === 'ACCESSORIES' && activeDept === 'Accessories' && activeCategory === 'All Products') ||
+                      (activeDept === cat.department && activeCategory === (cat.category || 'All Products'));
+
+                    return (
                       <button
-                        key={s.id}
+                        key={cat.id}
                         type="button"
-                        className={`porto-hero-dot${idx === currentHeroSlide ? ' active' : ''}`}
-                        onClick={() => setCurrentHeroSlide(idx)}
-                        aria-label={`Go to slide ${idx + 1}: ${s.title}`}
+                        className={`ax-cat-tile${isActive ? ' active' : ''}`}
+                        onClick={() => {
+                          setActiveDept(cat.department);
+                          setActiveCategory(cat.category || 'All Products');
+                          document.getElementById('trending-drops')?.scrollIntoView({ behavior: 'smooth' });
+                        }}
                       >
-                        <span className="dot-pill" />
-                        <span className="dot-label">{s.category}</span>
+                        <div className="ax-cat-media">
+                          <img src={cat.image} alt={cat.name} />
+                        </div>
+                        <span className="ax-cat-label">{cat.name}</span>
                       </button>
-                    ))}
-                  </div>
+                    );
+                  })}
                 </div>
               </div>
             </section>
 
-            {/* ── VALUE PROPOSITION 4-COLUMN STRIP (Porto Reference Match) ── */}
-            <section className="porto-trust-strip">
-              <div className="porto-trust-grid">
-                <div className="porto-trust-card">
-                  <div className="porto-trust-icon">
-                    <Truck size={28} />
+            {/* ── OUR BEST COLLECTIONS (Matching Image 2 Reference) ── */}
+            <section id="trending-drops" className="ax-section ax-collections-section">
+              <span id="featured" />
+              <div className="ax-container">
+                <div className="ax-collections-header">
+                  <div className="ax-collections-title-group">
+                    <h2 className="ax-collections-title">
+                      Our Best<br />Collections
+                    </h2>
                   </div>
-                  <div className="porto-trust-text">
-                    <strong>FREE SHIPPING &amp; RETURN</strong>
-                    <small>Free local delivery on wholesale &amp; Turbhe orders</small>
-                  </div>
-                </div>
 
-                <div className="porto-trust-card">
-                  <div className="porto-trust-icon">
-                    <ShieldCheck size={28} />
-                  </div>
-                  <div className="porto-trust-text">
-                    <strong>MONEY BACK GUARANTEE</strong>
-                    <small>100% genuine shop verified quality assurance</small>
-                  </div>
-                </div>
-
-                <div className="porto-trust-card">
-                  <div className="porto-trust-icon">
-                    <Headphones size={28} />
-                  </div>
-                  <div className="porto-trust-text">
-                    <strong>ONLINE SUPPORT 24/7</strong>
-                    <small>Instant WhatsApp assistance from store team</small>
-                  </div>
-                </div>
-
-                <div className="porto-trust-card">
-                  <div className="porto-trust-icon">
-                    <CreditCard size={28} />
-                  </div>
-                  <div className="porto-trust-text">
-                    <strong>SECURE PAYMENT</strong>
-                    <small>UPI, Cards, Cash &amp; GST tax invoice available</small>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            {/* ── FEATURED PRODUCTS SECTION (With Ornamental Header) ── */}
-            <section id="featured" className="porto-section">
-              {/* Ornamental Section Divider Header */}
-              <div className="porto-ornament-header">
-                <div className="porto-ornament-line" />
-                <div className="porto-ornament-title-block">
-                  <h2 className="porto-ornament-title">FeaturedProducts</h2>
-                  <p className="porto-ornament-sub">Amazing products added recently in our catalog</p>
-                </div>
-                <div className="porto-ornament-line" />
-              </div>
-
-              {/* Department & Subcategory Filter Tabs (Derived from Database) */}
-              <div className="porto-category-tabs">
-                {dbDepartments.map((dept) => {
-                  const count = deptCounts[dept.id] ?? 0;
-                  return (
+                  <div className="ax-collections-pills">
+                    {/* All Categories Pill */}
                     <button
-                      key={dept.id}
                       type="button"
-                      className={`porto-filter-pill${activeDept === dept.id ? ' active' : ''}`}
+                      className={`ax-collection-pill${activeDept === 'all' && activeCategory === 'All Products' ? ' active' : ''}`}
                       onClick={() => {
-                        setActiveDept(dept.id);
+                        setActiveDept('all');
                         setActiveCategory('All Products');
                       }}
                     >
-                      <span>{dept.emoji}</span>
-                      <span>{dept.label}</span>
-                      <span className="porto-filter-count">{count}</span>
+                      All Categories
                     </button>
-                  );
-                })}
-              </div>
 
-              {/* Dynamic Subcategory Filter Pills (From Database for current department) */}
-              {availableSubcategories.length > 0 && (
-                <div className="porto-subcat-filter-strip">
-                  <div className="porto-subcat-inner">
-                    <button
-                      type="button"
-                      className={`porto-subcat-tag${activeCategory === 'All Products' ? ' active' : ''}`}
-                      onClick={() => setActiveCategory('All Products')}
-                    >
-                      All {activeDept === 'all' ? 'Products' : activeDept} ({deptCounts[activeDept] ?? products.length})
-                    </button>
-                    {availableSubcategories.map(({ category, count }) => (
-                      <button
-                        key={category}
-                        type="button"
-                        className={`porto-subcat-tag${activeCategory === category ? ' active' : ''}`}
-                        onClick={() => setActiveCategory(category)}
-                      >
-                        <span>{category}</span>
-                        <span className="porto-subcat-pill-count">{count}</span>
-                      </button>
-                    ))}
+                    {/* Department / Category Pills */}
+                    {dbDepartments
+                      .filter((d) => d.id !== 'all')
+                      .map((dept) => (
+                        <button
+                          key={dept.id}
+                          type="button"
+                          className={`ax-collection-pill${activeDept === dept.id ? ' active' : ''}`}
+                          onClick={() => {
+                            setActiveDept(dept.id);
+                            setActiveCategory('All Products');
+                          }}
+                        >
+                          {dept.label}
+                        </button>
+                      ))}
                   </div>
                 </div>
-              )}
 
-              {/* Product Grid */}
-              {productsLoading ? (
-                <div className="porto-loading-state">
-                  <div className="porto-spinner" />
-                  <span>Loading catalog…</span>
-                </div>
-              ) : filteredProducts.length === 0 ? (
-                <div className="porto-empty-products">
-                  <h3>No products found matching filters</h3>
-                  <p>Try resetting department filters or search keywords.</p>
-                  <button
-                    type="button"
-                    className="porto-hero-cta-btn"
-                    onClick={() => {
-                      setActiveDept('all');
-                      setActiveCategory('All Products');
-                      setSearchQuery('');
-                    }}
-                  >
-                    Reset Filters
-                  </button>
-                </div>
-              ) : (
-                <div className="porto-products-grid">
-                  {filteredProducts.slice(0, 8).map((product) => (
-                    <ProductCard
-                      key={product.id}
-                      product={product}
-                      cart={cart}
-                      wishlist={wishlist}
-                      onToggleWishlist={handleToggleWishlist}
-                      onAddToCart={handleAddToCart}
-                      onUpdateQuantity={handleUpdateQuantity}
-                      onQuickView={handleOpenQuickView}
-                    />
-                  ))}
-                </div>
-              )}
-            </section>
-
-            {/* ── EDITORIAL PROMO GRID ("SummerCollection" Reference Match) ── */}
-            <section className="porto-section porto-promo-section">
-              {/* Ornamental Section Header */}
-              <div className="porto-ornament-header">
-                <div className="porto-ornament-line" />
-                <div className="porto-ornament-title-block">
-                  <h2 className="porto-ornament-title">SummerCollection</h2>
-                  <p className="porto-ornament-sub">Curated footwear built for full shifts and everyday street style</p>
-                </div>
-                <div className="porto-ornament-line" />
-              </div>
-
-              {/* 3-Column Promo Layout (Exact match from reference photo) */}
-              <div className="porto-promo-grid">
-                {/* Column 1: Tall Lifestyle Photo Banner */}
-                <div className="porto-promo-tall-banner">
-                  <img
-                    src="/images/sport_shoes_lifestyle.jpg"
-                    alt="Sport Shoes Lifestyle"
-                    className="porto-promo-bg-img"
-                  />
-                  <div className="porto-promo-banner-overlay">
-                    <span className="porto-script-accent" style={{ color: '#fff', fontSize: '28px' }}>
-                      Sport
-                    </span>
-                    <h3 className="porto-promo-banner-title">Shoes</h3>
-                    <p className="porto-promo-banner-desc">Ultra-cushioned comfort for active days &amp; hard work.</p>
+                {/* Product Grid */}
+                {productsLoading ? (
+                  <div className="ax-state">
+                    <div className="ax-spinner" />
+                    <p>Loading drops…</p>
+                  </div>
+                ) : filteredProducts.length === 0 ? (
+                  <div className="ax-state">
+                    <h3>No drops found</h3>
+                    <p>Try resetting department filters or search keywords.</p>
                     <button
                       type="button"
-                      className="porto-promo-banner-btn"
+                      className="ax-btn ax-btn-dark"
                       onClick={() => {
-                        setActiveDept('Footwear');
-                        const el = document.getElementById('featured');
-                        if (el) el.scrollIntoView({ behavior: 'smooth' });
+                        setActiveDept('all');
+                        setActiveCategory('All Products');
+                        setSearchQuery('');
                       }}
                     >
-                      DISCOVER MORE →
+                      Reset Filters
                     </button>
                   </div>
-                </div>
+                ) : (
+                  <div className="ax-product-grid">
+                    {filteredProducts.slice(0, 8).map((product) => (
+                      <ProductCard
+                        key={product.id}
+                        product={product}
+                        cart={cart}
+                        wishlist={wishlist}
+                        onToggleWishlist={handleToggleWishlist}
+                        onAddToCart={handleAddToCart}
+                        onUpdateQuantity={handleUpdateQuantity}
+                        onQuickView={(prod) => setZoomModalProduct(prod)}
+                        onOpenZoom={(prod) => setZoomModalProduct(prod)}
+                        onViewProduct={(id) => navigateTo(`/product-description?id=${id}`)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </section>
 
-                {/* Column 2: Stacked Dark Editorial Cards ("For Her" & "For Him") */}
-                <div className="porto-promo-stacked-col">
-                  {/* Card "For Her" */}
-                  <div
-                    className="porto-dark-editorial-card"
+            {/* ── PROMO ROW: "THE SEASON OF RAW" + "OUR VIBE" ── */}
+            <section className="ax-section">
+              <div className="ax-container">
+                <div className="ax-promo-row">
+                  {/* Left Banner: The Season of Raw (from Banner Database) */}
+                  <button
+                    type="button"
+                    className="ax-season"
                     onClick={() => {
-                      setActiveDept('Footwear');
-                      const el = document.getElementById('featured');
-                      if (el) el.scrollIntoView({ behavior: 'smooth' });
+                      setActiveDept(promoBanner.department || 'Footwear');
+                      setActiveCategory(promoBanner.category || 'All Products');
+                      document.getElementById('trending-drops')?.scrollIntoView({ behavior: 'smooth' });
                     }}
                   >
-                    <div className="porto-editorial-inner">
-                      <p className="porto-script-accent porto-script-white">For Her</p>
-                      <small className="porto-editorial-sub">Comfortable lightweight work &amp; daily pairs</small>
-                      <span className="porto-editorial-arrow">SHOP NOW ↗</span>
-                    </div>
-                  </div>
-
-                  {/* Card "For Him" */}
-                  <div
-                    className="porto-dark-editorial-card porto-dark-editorial-card-alt"
-                    onClick={() => {
-                      setActiveDept('Footwear');
-                      setActiveCategory('Safety Shoes');
-                      const el = document.getElementById('featured');
-                      if (el) el.scrollIntoView({ behavior: 'smooth' });
-                    }}
-                  >
-                    <div className="porto-editorial-inner">
-                      <p className="porto-script-accent porto-script-white">For Him</p>
-                      <small className="porto-editorial-sub">Heavy duty steel-toe &amp; rugged leather boots</small>
-                      <span className="porto-editorial-arrow">SHOP NOW ↗</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Column 3: Dual Product Spotlights */}
-                <div className="porto-promo-spotlight-col">
-                  {products.slice(0, 2).map((prod) => (
-                    <div className="porto-spotlight-item" key={`spotlight-${prod.id}`}>
-                      <div className="porto-spotlight-thumb">
-                        <img src={prod.image} alt={prod.name} />
+                    <img
+                      src={promoBanner.image || '/images/promo_season_raw.jpg'}
+                      alt={promoBanner.title || 'The Season of Raw'}
+                    />
+                    <div className="ax-season-overlay">
+                      <div>
+                        <h3 className="ax-season-title">
+                          {(() => {
+                            const rawTitle = promoBanner?.title || 'THE SEASON OF RAW';
+                            if (rawTitle.includes('\n')) {
+                              return rawTitle.split('\n').map((line, i, arr) => (
+                                <span key={i}>
+                                  {line}
+                                  {i < arr.length - 1 && <br />}
+                                </span>
+                              ));
+                            }
+                            if (rawTitle.includes(' OF ')) {
+                              const parts = rawTitle.split(' OF ');
+                              return (
+                                <>
+                                  {parts[0]}<br />
+                                  OF {parts.slice(1).join(' OF ')}
+                                </>
+                              );
+                            }
+                            return rawTitle;
+                          })()}
+                        </h3>
                       </div>
-                      <div className="porto-spotlight-info">
-                        <span className="porto-spotlight-cat">{prod.category}</span>
-                        <h4>{prod.name}</h4>
-                        <div className="porto-stars">
-                          {[...Array(5)].map((_, i) => (
-                            <Star key={i} size={11} fill="#f59e0b" stroke="#f59e0b" />
-                          ))}
+                      <div className="ax-season-bottom">
+                        <div className="ax-season-badge">
+                          <small>{promoBanner?.priceLabel || promoBanner?.eyebrow || 'UP TO'}</small>
+                          <strong>{promoBanner?.price || '40% OFF'}</strong>
                         </div>
-                        <div className="porto-spotlight-price">
-                          {prod.originalPrice && <del>{prod.originalPrice}</del>}
-                          <strong>{prod.price}</strong>
-                        </div>
+                        <span className="ax-season-cta">
+                          {promoBanner.ctaText || 'EXPLORE DROP'} <ChevronRight size={14} />
+                        </span>
+                      </div>
+                    </div>
+                  </button>
+
+                  {/* Right Mosaic: Our Vibe (from Database) */}
+                  <div className="ax-vibe">
+                    <h2 className="ax-section-title" style={{ marginBottom: '12px' }}>Our Vibe</h2>
+                    <div className="ax-vibe-grid">
+                      {vibeCards.map((vibe, idx) => (
                         <button
+                          key={vibe.id}
                           type="button"
-                          className="porto-spotlight-add-btn"
-                          onClick={() => handleAddToCart(prod)}
+                          className={`ax-vibe-tile${vibe.layout === 'tall' || idx === 0 ? ' tall' : ''}`}
+                          onClick={() => {
+                            setActiveDept(vibe.department || 'Footwear');
+                            if (vibe.category && vibe.category !== 'All Products') {
+                              setActiveCategory(vibe.category);
+                            } else {
+                              setActiveCategory('All Products');
+                            }
+                            document.getElementById('trending-drops')?.scrollIntoView({ behavior: 'smooth' });
+                          }}
                         >
-                          <ShoppingCart size={13} /> Add to Cart
+                          <img src={vibe.image} alt={vibe.title} />
+                          <span>{vibe.title}</span>
                         </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* ── VALUE PERKS STRIP ── */}
+            <section className="ax-section">
+              <div className="ax-container">
+                <div className="ax-perks">
+                  <div className="ax-perk">
+                    <div className="ax-perk-icon"><Truck size={22} /></div>
+                    <div>
+                      <strong>FAST DISPATCH</strong>
+                      <small>Direct wholesale &amp; express Turbhe delivery</small>
+                    </div>
+                  </div>
+                  <div className="ax-perk">
+                    <div className="ax-perk-icon"><ShieldCheck size={22} /></div>
+                    <div>
+                      <strong>GENUINE QUALITY</strong>
+                      <small>Certified safety gear &amp; premium street pairs</small>
+                    </div>
+                  </div>
+                  <div className="ax-perk">
+                    <div className="ax-perk-icon"><CreditCard size={22} /></div>
+                    <div>
+                      <strong>SECURE PAYMENTS</strong>
+                      <small>UPI, Cards, Cash &amp; GST tax invoice</small>
+                    </div>
+                  </div>
+                  <div className="ax-perk">
+                    <div className="ax-perk-icon"><Headphones size={22} /></div>
+                    <div>
+                      <strong>24/7 SUPPORT</strong>
+                      <small>Instant WhatsApp enquiry with store staff</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* ── VISIT & FAQ ── */}
+            <section id="location" className="ax-section">
+              <div className="ax-container">
+                <div className="ax-visit">
+                  <div className="ax-visit-card dark">
+                    <div>
+                      <p className="ax-visit-eyebrow">STORE LOCATION</p>
+                      <h2>TURBHE STORE · COME SAY HELLO</h2>
+                      <p>
+                        Shop No. 51, Janta Market, Sector-23, Turbhe, Navi Mumbai – 400705
+                      </p>
+                      <div className="ax-visit-meta">
+                        <Clock3 size={16} /> Mon – Sun · 10:00 AM – 9:00 PM
                       </div>
                     </div>
-                  ))}
-                </div>
-              </div>
-            </section>
-
-            {/* ── BEST SELLER PRODUCTS SECTION (Reference Match) ── */}
-            <section className="porto-section">
-              {/* Ornamental Section Header */}
-              <div className="porto-ornament-header">
-                <div className="porto-ornament-line" />
-                <div className="porto-ornament-title-block">
-                  <h2 className="porto-ornament-title">Best SellerProducts</h2>
-                  <p className="porto-ornament-sub">Only the best seller products added recently in our catalog</p>
-                </div>
-                <div className="porto-ornament-line" />
-              </div>
-
-              {/* Best Seller Grid */}
-              <div className="porto-products-grid">
-                {bestSellerProducts.map((product) => (
-                  <ProductCard
-                    key={`bestseller-${product.id}`}
-                    product={product}
-                    cart={cart}
-                    wishlist={wishlist}
-                    onToggleWishlist={handleToggleWishlist}
-                    onAddToCart={handleAddToCart}
-                    onUpdateQuantity={handleUpdateQuantity}
-                    onQuickView={handleOpenQuickView}
-                  />
-                ))}
-              </div>
-            </section>
-
-            {/* ── BRAND LOGOS / CERTIFICATIONS STRIP (Porto Reference Match) ── */}
-            <section className="porto-brands-strip">
-              <div className="porto-brands-inner">
-                <div className="porto-brand-logo-item">
-                  <strong>DAVID SMITH</strong>
-                </div>
-                <div className="porto-brand-logo-item">
-                  <span className="porto-brand-tag-box">RJ</span>
-                  <strong>RON JONES</strong>
-                </div>
-                <div className="porto-brand-logo-item">
-                  <strong>GOLDENGRID</strong>
-                </div>
-                <div className="porto-brand-logo-item">
-                  <strong>CLIMB THE MOUNTAIN</strong>
-                </div>
-                <div className="porto-brand-logo-item">
-                  <strong>ISI CERTIFIED</strong>
-                </div>
-                <div className="porto-brand-logo-item">
-                  <strong>VANT GARDE</strong>
-                </div>
-              </div>
-            </section>
-
-            {/* ── STORE LOCATION & TRUST ── */}
-            <section id="location" className="porto-section porto-location-section">
-              <div className="porto-location-grid">
-                <a
-                  className="porto-map-card"
-                  href="https://www.google.com/maps/search/?api=1&query=Shop+No.+51+Janta+Market+Sector-23+Turbhe+Navi+Mumbai+400705"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="Open store location in Google Maps"
-                >
-                  <div className="porto-map-pin">
-                    <MapPin size={28} />
-                  </div>
-                  <div className="porto-map-badge">
-                    <span>Visit In Person</span>
-                    <strong>Janta Market · Turbhe</strong>
-                  </div>
-                </a>
-
-                <div className="porto-location-copy">
-                  <p className="porto-script-accent">Come Say Hello</p>
-                  <h2>Right in the heart of <em>Turbhe.</em></h2>
-                  <p className="porto-address-text">
-                    Shop No. 51, Janta Market, Sector-23, Turbhe, Navi Mumbai – 400705
-                  </p>
-                  <div className="porto-hours-block">
-                    <Clock3 size={18} />
-                    <div>
-                      <strong>Store Hours</strong>
-                      <small>Mon – Sun · 10:00 AM – 9:00 PM</small>
+                    <div className="ax-visit-actions">
+                      <a
+                        className="ax-btn ax-btn-outline"
+                        href="https://www.google.com/maps/search/?api=1&query=Shop+No+51+Janta+Market+Sector+23+Turbhe+Navi+Mumbai+400705"
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Get Directions <ArrowUpRight size={14} />
+                      </a>
+                      <a
+                        className="ax-btn ax-btn-whatsapp"
+                        href={whatsappLink('Hi Akshat Enterprises, I want to visit your store today.')}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        <MessageCircle size={15} /> WhatsApp Store
+                      </a>
                     </div>
                   </div>
-                  <div className="porto-location-actions">
-                    <a
-                      className="porto-hero-cta-btn"
-                      href="https://www.google.com/maps/search/?api=1&query=Shop+No+51+Janta+Market+Sector+23+Turbhe+Navi+Mumbai+400705"
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Get Directions <ArrowUpRight size={16} />
-                    </a>
-                    <a
-                      className="porto-hero-cta-btn porto-hero-cta-btn-alt"
-                      href={whatsappLink('Hi Akshat Enterprises, I want to visit your store today.')}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      <MessageCircle size={16} /> WhatsApp Store
-                    </a>
+
+                  <div className="ax-visit-card">
+                    <p className="ax-visit-eyebrow" style={{ color: 'var(--ax-muted)' }}>COMMON QUESTIONS</p>
+                    <h2 style={{ fontSize: '24px', marginBottom: '16px' }}>Frequently Asked</h2>
+                    <div className="ax-faq-list">
+                      {faqs.slice(0, 4).map(([q, a], idx) => (
+                        <div className={`ax-faq${openFaq === idx ? ' open' : ''}`} key={q}>
+                          <button
+                            type="button"
+                            onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
+                          >
+                            <span>{q}</span>
+                            <ChevronDown size={16} />
+                          </button>
+                          {openFaq === idx && <p>{a}</p>}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
-              </div>
-            </section>
-
-            {/* ── FAQ SECTION ── */}
-            <section className="porto-section porto-faq-section">
-              <div className="porto-ornament-header">
-                <div className="porto-ornament-line" />
-                <div className="porto-ornament-title-block">
-                  <h2 className="porto-ornament-title">QuestionsAnswered</h2>
-                  <p className="porto-ornament-sub">Everything you need to know about purchasing and store visits</p>
-                </div>
-                <div className="porto-ornament-line" />
-              </div>
-
-              <div className="porto-faq-list">
-                {faqs.map(([question, answer], index) => (
-                  <div className={`porto-faq-card${openFaq === index ? ' open' : ''}`} key={question}>
-                    <button
-                      type="button"
-                      className="porto-faq-question"
-                      onClick={() => setOpenFaq(openFaq === index ? null : index)}
-                    >
-                      <span>{question}</span>
-                      <ChevronDown size={18} className="porto-faq-chevron" />
-                    </button>
-                    {openFaq === index && <p className="porto-faq-answer">{answer}</p>}
-                  </div>
-                ))}
               </div>
             </section>
           </>
         )}
       </main>
 
-      {/* ── LUXURY SITE FOOTER (Porto Style) ── */}
-      <footer className="porto-footer">
-        <div className="porto-footer-inner">
-          <div className="porto-footer-col">
-            <div className="porto-brand">
-              <img src="/AE-logo.png" alt="Akshat Enterprises" className="porto-brand-logo-img footer-logo" />
+      {/* ── APEX LUXURY FOOTER (Design Match) ── */}
+      <footer className="ax-footer">
+        <div className="ax-footer-inner">
+          {/* Column 1: APEX Brand + Checkmarks */}
+          <div className="ax-footer-brand">
+            <div className="ax-brand-group" style={{ marginBottom: '16px' }}>
+              <span className="ax-brand-title" style={{ color: '#fff', fontSize: '28px' }}>
+                APE<span className="ax-brand-x">X</span>
+              </span>
+              <img src="/AE-logo.png" alt="Akshat Enterprises" className="ax-footer-logo" />
             </div>
-            <p className="porto-footer-about">
-              Wholesalers &amp; retailers of premium safety footwear, gum boots, stylish casual sneakers and construction workwear since 2014.
-            </p>
-            <div className="porto-footer-contact-item">
-              <Phone size={14} />
-              <a href="tel:9892228186">+91 98922 28186</a>
-            </div>
-            <div className="porto-footer-contact-item">
-              <MessageCircle size={14} />
-              <a href={whatsappLink('Hi Akshat Enterprises, I have a query.')}>Chat on WhatsApp</a>
+
+            <ul className="ax-footer-checks">
+              <li>
+                <Check size={16} /> Genuine Quality
+              </li>
+              <li>
+                <Check size={16} /> Fast Shipping
+              </li>
+              <li>
+                <Check size={16} /> Secure Payments
+              </li>
+            </ul>
+
+            <div className="ax-footer-contact">
+              <a href="tel:9892228186"><Phone size={13} /> +91 98922 28186</a>
+              <a href={whatsappLink('Hi Akshat Enterprises')}><MessageCircle size={13} /> Turbhe Navi Mumbai</a>
             </div>
           </div>
 
-          <div className="porto-footer-col">
-            <h4 className="porto-footer-heading">Collections</h4>
-            <ul className="porto-footer-links">
-              <li>
-                <button type="button" onClick={() => { setActiveDept('Footwear'); navigateTo('/'); }}>
-                  Footwear &amp; Shoes
-                </button>
-              </li>
-              <li>
-                <button type="button" onClick={() => { setActiveDept('Footwear'); setActiveCategory('Safety Shoes'); navigateTo('/'); }}>
-                  Safety Steel-Toe Shoes
-                </button>
-              </li>
-              <li>
-                <button type="button" onClick={() => { setActiveDept('Footwear'); setActiveCategory('Mud Shoes / Gum Boots'); navigateTo('/'); }}>
-                  Gum Boots &amp; Rain Shoes
-                </button>
-              </li>
-              <li>
-                <button type="button" onClick={() => { setActiveDept('Jackets'); navigateTo('/'); }}>
-                  Construction Jackets
-                </button>
-              </li>
-              <li>
-                <button type="button" onClick={() => navigateTo('/products')}>
-                  All Catalog Products
-                </button>
-              </li>
+          {/* Column 2: SHOP */}
+          <div>
+            <h4>SHOP</h4>
+            <ul className="ax-footer-links">
+              <li><button type="button" onClick={() => { setActiveDept('Footwear'); navigateTo('/'); }}>All Shoes</button></li>
+              <li><button type="button" onClick={() => { setActiveDept('Jackets'); navigateTo('/'); }}>Jackets</button></li>
+              <li><button type="button" onClick={() => { setActiveDept('Accessories'); setActiveCategory('Caps'); navigateTo('/'); }}>Caps</button></li>
+              <li><button type="button" onClick={() => { setActiveDept('Footwear'); setActiveCategory('Casual'); navigateTo('/'); }}>Sandals</button></li>
             </ul>
           </div>
 
-          <div className="porto-footer-col">
-            <h4 className="porto-footer-heading">Customer Service</h4>
-            <ul className="porto-footer-links">
-              <li>
-                <button type="button" onClick={() => navigateTo('/cart')}>
-                  Shopping Cart
-                </button>
-              </li>
-              <li>
-                <button type="button" onClick={() => navigateTo('/admin')}>
-                  Admin Portal
-                </button>
-              </li>
-              <li>
-                <a href="#location">Store Location &amp; Map</a>
-              </li>
-              <li>
-                <a href={`tel:${secondPhone}`}>Direct Store Line</a>
-              </li>
+          {/* Column 3: CUSTOMER CARE */}
+          <div>
+            <h4>CUSTOMER CARE</h4>
+            <ul className="ax-footer-links">
+              <li><a href={whatsappLink('Hi Akshat Enterprises, I need help with an order.')}>Contact Us</a></li>
+              <li><a href="#location">Shipping Info</a></li>
+              <li><a href="#location">Returns &amp; Exchanges</a></li>
+              <li><a href="#location">FAQ</a></li>
+              <li><button type="button" onClick={() => navigateTo('/cart')}>Size Guide</button></li>
             </ul>
           </div>
 
-          <div className="porto-footer-col">
-            <h4 className="porto-footer-heading">Shop Hours &amp; Location</h4>
-            <p className="porto-footer-address">
-              Shop No. 51, Janta Market, Sector-23, Turbhe, Navi Mumbai – 400705
-            </p>
-            <p className="porto-footer-timings">
-              <strong>Mon – Sun:</strong> 10:00 AM – 9:00 PM
-            </p>
-            <div className="porto-payment-badges">
-              <span>UPI</span>
-              <span>GPay</span>
-              <span>Cash</span>
-              <span>Visa</span>
-              <span>Mastercard</span>
+          {/* Column 4: COMPANY */}
+          <div>
+            <h4>COMPANY</h4>
+            <ul className="ax-footer-links">
+              <li><a href="#location">About Us</a></li>
+              <li><button type="button" onClick={() => navigateTo('/wishlist')}>Saved Wishlist</button></li>
+              <li><button type="button" onClick={() => navigateTo('/cart')}>My Cart</button></li>
+              <li><a href="#location">Sustainability</a></li>
+              <li><a href="#location">Store Locator</a></li>
+            </ul>
+          </div>
+
+          {/* Column 5: NEWSLETTER */}
+          <div className="ax-footer-news">
+            <h4>NEWSLETTER</h4>
+            <p className="ax-footer-text">Enter your email to join the crew.</p>
+            <form
+              className="ax-newsletter"
+              onSubmit={(e) => {
+                e.preventDefault();
+                showToast('Thank you for subscribing to APEX crew!');
+              }}
+            >
+              <input type="email" placeholder="Enter your email" required />
+              <button type="submit" aria-label="Subscribe">
+                <ChevronRight size={18} />
+              </button>
+            </form>
+
+            <div className="ax-social">
+              <a href="#instagram" aria-label="Instagram"><Instagram size={15} /></a>
+              <a href="#facebook" aria-label="Facebook">f</a>
+              <a href="#twitter" aria-label="Twitter">t</a>
+              <a href="#pinterest" aria-label="Pinterest">p</a>
+              <a href="#youtube" aria-label="YouTube">▶</a>
+              <a href="#tiktok" aria-label="TikTok">♪</a>
             </div>
           </div>
         </div>
 
-        <div className="porto-footer-bottom">
-          <div className="porto-footer-bottom-inner">
-            <p>© {new Date().getFullYear()} Akshat Enterprises eCommerce. All rights reserved.</p>
-            <div className="porto-footer-social">
-              <a href={whatsappLink('Hi Akshat Enterprises.')} aria-label="WhatsApp" target="_blank" rel="noreferrer">
-                <MessageCircle size={16} />
-              </a>
-              <a href={`tel:${secondPhone}`} aria-label="Call">
-                <Phone size={16} />
-              </a>
-              <a href="#instagram" aria-label="Instagram">
-                <Instagram size={16} />
-              </a>
+        <div className="ax-footer-bottom">
+          <div className="ax-footer-bottom-inner">
+            <p>© {new Date().getFullYear()} Akshat Enterprises. All Rights Reserved.</p>
+            <div className="ax-footer-bottom-links">
+              <button type="button" onClick={() => showToast('Terms & Conditions: Genuine Products Guarantee')}>
+                Terms &amp; Conditions
+              </button>
+              <button type="button" onClick={() => showToast('Privacy Policy: All customer info is protected')}>
+                Privacy Policy
+              </button>
             </div>
           </div>
         </div>
@@ -1464,16 +1700,32 @@ export default function App() {
                 >
                   View Full Cart &amp; Breakdown
                 </button>
-                <a
-                  className="porto-drawer-whatsapp-btn"
-                  href={`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(
-                    `Hi Akshat Enterprises, I would like to confirm my order of ${totalCartCount} items worth ₹${cartTotalPrice.toLocaleString('en-IN')}. Please share availability and payment details!`
-                  )}`}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  <MessageCircle size={16} /> Confirm Order via WhatsApp
-                </a>
+                <div className="porto-drawer-wa-actions">
+                  <a
+                    className="porto-drawer-whatsapp-btn"
+                    href={`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(
+                      `*Hi Akshat Enterprises, I would like to place an order for ${totalCartCount} items worth ₹${cartTotalPrice.toLocaleString('en-IN')}:*\n\n` +
+                      cart.map((it, i) => `${i + 1}. ${it.name} ${it.selectedSize ? `(Size: ${it.selectedSize})` : ''} × ${it.quantity}`).join('\n') +
+                      `\n\nPlease share availability and delivery details!`
+                    )}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <MessageCircle size={15} /> Confirm Order with Store
+                  </a>
+                  <a
+                    className="porto-drawer-share-wa-btn"
+                    href={`https://api.whatsapp.com/send?text=${encodeURIComponent(
+                      `📦 *MY SAVED FOOTWEAR SELECTION*\n🏢 Akshat Enterprises Catalog\n\n` +
+                      cart.map((it, i) => `${i + 1}. ${it.name} ${it.selectedSize ? `(Size: ${it.selectedSize})` : ''} × ${it.quantity} = ${it.price}`).join('\n') +
+                      `\n\nTotal: ${totalCartCount} items | Subtotal: ₹${cartTotalPrice.toLocaleString('en-IN')}\nTurbhe, Navi Mumbai`
+                    )}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <Share2 size={14} /> Save to My WhatsApp
+                  </a>
+                </div>
               </div>
             )}
           </aside>
@@ -1633,105 +1885,31 @@ export default function App() {
         </div>
       )}
 
-      {/* ── QUICK VIEW MODAL ── */}
+      {/* ── PRODUCT DETAIL VIEW MODAL (PulseSneaks Style & 4 Photo Angles) ── */}
       {quickViewProduct && (
-        <div className="porto-modal-overlay" onClick={() => setQuickViewProduct(null)}>
-          <div className="porto-modal-dialog" onClick={(e) => e.stopPropagation()}>
-            <button
-              type="button"
-              className="porto-modal-close"
-              onClick={() => setQuickViewProduct(null)}
-              aria-label="Close modal"
-            >
-              <X size={18} />
-            </button>
+        <ProductDetailModal
+          product={quickViewProduct}
+          onClose={() => setQuickViewProduct(null)}
+          onAddToCart={(product, size, quantity) => {
+            handleAddToCart(product, size, quantity);
+            setQuickViewProduct(null);
+          }}
+          onToggleWishlist={handleToggleWishlist}
+          isWishlisted={wishlist.includes(quickViewProduct.id)}
+        />
+      )}
 
-            <div className="porto-quickview-grid">
-              <div className="porto-quickview-media">
-                <img
-                  src={quickViewProduct.image}
-                  alt={quickViewProduct.name}
-                  className="porto-quickview-img"
-                />
-              </div>
-
-              <div className="porto-quickview-info">
-                <p className="porto-card-category">
-                  {quickViewProduct.department} · {quickViewProduct.category}
-                </p>
-                <h3 className="porto-quickview-title">{quickViewProduct.name}</h3>
-
-                <div className="porto-rating-row">
-                  <div className="porto-stars">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} size={14} fill="#f59e0b" stroke="#f59e0b" />
-                    ))}
-                  </div>
-                  <span className="porto-review-count">({quickViewProduct.reviewsCount || 18} Customer Reviews)</span>
-                </div>
-
-                <div className="porto-price-row" style={{ margin: '14px 0' }}>
-                  {quickViewProduct.originalPrice && (
-                    <span className="porto-orig-price" style={{ fontSize: '16px' }}>
-                      {quickViewProduct.originalPrice}
-                    </span>
-                  )}
-                  <strong className="porto-current-price" style={{ fontSize: '24px' }}>
-                    {quickViewProduct.price}
-                  </strong>
-                </div>
-
-                <p className="porto-quickview-desc">
-                  Heavy-duty, premium build curated by Akshat Enterprises. Ideal for work safety, durability, and daily street comfort.
-                </p>
-
-                {quickViewProduct.sizes && quickViewProduct.sizes.length > 0 && (
-                  <div className="porto-quickview-sizes">
-                    <label>Select Size (IND):</label>
-                    <div className="porto-size-pills">
-                      {quickViewProduct.sizes.map((s) => (
-                        <button
-                          type="button"
-                          key={s}
-                          className={`porto-size-pill${quickViewSize === s ? ' active' : ''}`}
-                          onClick={() => setQuickViewSize(s)}
-                        >
-                          {s.replace('IND ', '')}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                <div className="porto-quickview-actions">
-                  <button
-                    type="button"
-                    className="porto-hero-cta-btn"
-                    style={{ flex: 1, padding: '12px 20px' }}
-                    onClick={() => {
-                      handleAddToCart(quickViewProduct, quickViewSize);
-                      setQuickViewProduct(null);
-                    }}
-                  >
-                    <ShoppingCart size={16} /> ADD TO CART
-                  </button>
-
-                  <a
-                    className="porto-hero-cta-btn porto-hero-cta-btn-alt"
-                    style={{ padding: '12px 18px' }}
-                    href={whatsappLink(
-                      `Hi Akshat Enterprises, I want to enquire about ${quickViewProduct.name} (${quickViewProduct.price}, Size: ${quickViewSize}).`
-                    )}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    <MessageCircle size={16} /> Enquire
-                  </a>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+      {/* ── PRODUCT ZOOM MAGNIFIER MODAL (Interactive hover zoom container) ── */}
+      {zoomModalProduct && (
+        <ProductZoomModal
+          product={zoomModalProduct}
+          onClose={() => setZoomModalProduct(null)}
+          onViewDescription={(id) => {
+            setZoomModalProduct(null);
+            navigateTo(`/product-description?id=${id}`);
+          }}
+          onAddToCart={handleAddToCart}
+        />
       )}
 
       {/* ── FLOATING WHATSAPP BUTTON ── */}

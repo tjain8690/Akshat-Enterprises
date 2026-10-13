@@ -26,11 +26,14 @@ export const DEPT_CATEGORIES: Record<string, string[]> = {
   Accessories: ['Gloves', 'Knee Guards', 'Reflective Vest'],
 };
 
-export const whatsappNumber = '919892228186';
+export const whatsappNumber = '918690041886';
 export const secondPhone = '9137235350';
 
 export const whatsappLink = (msg: string) =>
   `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(msg)}`;
+
+export const shareToWhatsAppLink = (msg: string) =>
+  `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
 
 export const faqs = [
   ['Do you offer cash on delivery?', 'We are a showcase store, so orders are confirmed directly with our team. Message us on WhatsApp to check delivery options and payment details for your location.'],
