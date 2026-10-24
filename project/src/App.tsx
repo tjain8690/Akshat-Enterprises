@@ -1681,15 +1681,6 @@ export default function App() {
                 <ChevronRight size={18} />
               </button>
             </form>
-
-            <div className="ax-social">
-              <a href="#instagram" aria-label="Instagram"><Instagram size={15} /></a>
-              <a href="#facebook" aria-label="Facebook">f</a>
-              <a href="#twitter" aria-label="Twitter">t</a>
-              <a href="#pinterest" aria-label="Pinterest">p</a>
-              <a href="#youtube" aria-label="YouTube">▶</a>
-              <a href="#tiktok" aria-label="TikTok">♪</a>
-            </div>
           </div>
         </div>
 

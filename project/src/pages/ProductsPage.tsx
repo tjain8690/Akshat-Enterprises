@@ -492,7 +492,18 @@ export function ProductsPage({
                 const cardSize = getCardSize(product);
 
                 return (
-                  <article className="product-card" key={product.id}>
+                  <article
+                    className="product-card"
+                    key={product.id}
+                    onClick={(e) => {
+                      const target = e.target as HTMLElement;
+                      if (target.closest('button') || target.closest('a') || target.closest('input')) {
+                        return;
+                      }
+                      setDetailProduct(product);
+                    }}
+                    style={{ cursor: 'pointer' }}
+                  >
                     <div
                       className="product-image"
                       onClick={() => setDetailProduct(product)}
@@ -542,22 +553,6 @@ export function ProductsPage({
                       </div>
                     )}
 
-                    {/* Size selector */}
-                    {product.sizes.length > 0 && (
-                      <div className="product-size-selector">
-                        {product.sizes.map((s) => (
-                          <button
-                            key={s}
-                            className={`size-pick-btn${cardSize === s ? ' selected' : ''}`}
-                            onClick={() =>
-                              setCardSizes((prev) => ({ ...prev, [product.id]: s }))
-                            }
-                          >
-                            {s.replace('IND ', '')}
-                          </button>
-                        ))}
-                      </div>
-                    )}
 
                     <div className="product-card-actions">
                       <button

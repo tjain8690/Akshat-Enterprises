@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
@@ -17,35 +17,136 @@ import { useNavigate } from 'react-router-dom';
 
 export function ProductImageSlider({ images, name }: { images: string[]; name: string }) {
   const [idx, setIdx] = useState(0);
-  const valid = images.filter(Boolean);
+  const trackRef = useRef<HTMLDivElement>(null);
+  const touchStartXRef = useRef(0);
+  const touchStartYRef = useRef(0);
+  const isSwipingRef = useRef(false);
+
+  // Filter valid images and deduplicate
+  const valid = useMemo(() => {
+    const list = images.filter(Boolean);
+    return Array.from(new Set(list));
+  }, [images]);
+
   if (valid.length === 0) return null;
-  if (valid.length === 1) return <img src={valid[0]} alt={name} className="product-card-img" />;
+  if (valid.length === 1) {
+    return <img src={valid[0]} alt={name} className="product-card-img" draggable={false} />;
+  }
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    if (el.clientWidth > 0) {
+      const current = Math.round(el.scrollLeft / el.clientWidth);
+      if (current !== idx && current >= 0 && current < valid.length) {
+        setIdx(current);
+      }
+    }
+  };
+
+  const scrollToIdx = (targetIdx: number) => {
+    const nextIdx = (targetIdx + valid.length) % valid.length;
+    setIdx(nextIdx);
+    if (trackRef.current) {
+      const width = trackRef.current.clientWidth;
+      trackRef.current.scrollTo({
+        left: nextIdx * width,
+        behavior: 'smooth',
+      });
+    }
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartXRef.current = e.touches[0].clientX;
+    touchStartYRef.current = e.touches[0].clientY;
+    isSwipingRef.current = false;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    const diffX = Math.abs(e.touches[0].clientX - touchStartXRef.current);
+    const diffY = Math.abs(e.touches[0].clientY - touchStartYRef.current);
+    if (diffX > 8 && diffX > diffY) {
+      isSwipingRef.current = true;
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (isSwipingRef.current) {
+      setTimeout(() => {
+        isSwipingRef.current = false;
+      }, 200);
+    }
+  };
+
+  const handleClickCapture = (e: React.MouseEvent) => {
+    // If the touch was a horizontal swipe gesture, intercept click so modal isn't opened while swiping
+    if (isSwipingRef.current) {
+      e.stopPropagation();
+      e.preventDefault();
+      isSwipingRef.current = false;
+    }
+  };
+
   return (
-    <div className="card-slider" onClick={(e) => e.stopPropagation()}>
-      <img src={valid[idx]} alt={`${name} — view ${idx + 1}`} className="product-card-img" />
+    <div className="card-slider">
+      {/* Horizontal smooth-scroll snap track for direct mobile touch swiping */}
+      <div
+        className="card-slider-track"
+        ref={trackRef}
+        onScroll={handleScroll}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onClickCapture={handleClickCapture}
+      >
+        {valid.map((src, i) => (
+          <div className="card-slider-slide" key={`${src}-${i}`}>
+            <img
+              src={src}
+              alt={`${name} — view ${i + 1}`}
+              className="product-card-img"
+              loading={i === 0 ? 'eager' : 'lazy'}
+              draggable={false}
+            />
+          </div>
+        ))}
+      </div>
+
+      {/* Prev / Next controls for desktop */}
       <button
         type="button"
         className="slider-arrow slider-prev"
-        onClick={(e) => { e.stopPropagation(); setIdx((i) => (i - 1 + valid.length) % valid.length); }}
+        onClick={(e) => {
+          e.stopPropagation();
+          scrollToIdx(idx - 1);
+        }}
         aria-label="Previous image"
       >
         <ChevronLeft size={14} />
       </button>
+
       <button
         type="button"
         className="slider-arrow slider-next"
-        onClick={(e) => { e.stopPropagation(); setIdx((i) => (i + 1) % valid.length); }}
+        onClick={(e) => {
+          e.stopPropagation();
+          scrollToIdx(idx + 1);
+        }}
         aria-label="Next image"
       >
         <ChevronRight size={14} />
       </button>
+
+      {/* Pagination dots */}
       <div className="slider-dots">
         {valid.map((_, i) => (
           <button
             type="button"
             key={i}
             className={`slider-dot${i === idx ? ' active' : ''}`}
-            onClick={(e) => { e.stopPropagation(); setIdx(i); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              scrollToIdx(i);
+            }}
             aria-label={`Image ${i + 1}`}
           />
         ))}
@@ -232,12 +333,12 @@ export function ProductCard({
         {/* Category Subtitle */}
         <p className="ax-card-cat">{product.department} • {product.category}</p>
 
-        {/* Product Title: Click redirects to /product-description */}
+        {/* Product Title: Click opens product details modal */}
         <h3
           className="ax-card-title"
-          onClick={handleViewDescription}
+          onClick={handleCardClick}
           style={{ cursor: 'pointer' }}
-          title="View product description"
+          title="View product details"
         >
           {product.name}
         </h3>
@@ -257,27 +358,6 @@ export function ProductCard({
           <span>{product.rating || 4.9} ({product.reviewsCount || 14} reviews)</span>
         </div>
 
-        {/* Optional Size Selector */}
-        {showDetails && product.sizes && product.sizes.length > 0 && (
-          <div className="ax-card-sizes">
-            {product.sizes.slice(0, 5).map((s) => (
-              <button
-                type="button"
-                key={s}
-                className={`ax-size${cardSize === s ? ' active' : ''}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setCardSize(s);
-                }}
-              >
-                {s.replace('IND ', '')}
-              </button>
-            ))}
-            {product.sizes.length > 5 && (
-              <span className="ax-size-more">+{product.sizes.length - 5}</span>
-            )}
-          </div>
-        )}
 
         {/* Footer: Price on left + Add to Cart Pill Button on right */}
         <div className="ax-card-foot">

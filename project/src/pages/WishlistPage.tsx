@@ -295,24 +295,6 @@ export function WishlistPage({
                       )}
                     </div>
 
-                    {/* Size Selector */}
-                    {product.sizes && product.sizes.length > 0 && (
-                      <div className="ax-wishlist-sizes-wrap">
-                        <span className="ax-wishlist-size-label">Size:</span>
-                        <div className="ax-wishlist-sizes-list">
-                          {product.sizes.map((s) => (
-                            <button
-                              key={s}
-                              type="button"
-                              className={`ax-wishlist-size-pill${currentSize === s ? ' active' : ''}`}
-                              onClick={() => handleSizeSelect(product.id, s)}
-                            >
-                              {s.replace('IND ', '')}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
 
                     {/* Action Buttons */}
                     <div className="ax-wishlist-actions">

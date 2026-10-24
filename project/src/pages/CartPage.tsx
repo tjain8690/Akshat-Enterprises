@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -50,6 +50,24 @@ export const formatPrice = (amount: number): string => {
   return `₹${amount.toLocaleString('en-IN')}`;
 };
 
+export type GroupedCartProduct = {
+  name: string;
+  category: string;
+  price: string;
+  unitPrice: number;
+  image: string;
+  tag?: string;
+  availableSizes: string[];
+  totalQuantity: number;
+  totalAmount: number;
+  sizes: {
+    originalIndex: number;
+    selectedSize: string;
+    quantity: number;
+    itemTotal: number;
+  }[];
+};
+
 export const CartPage: React.FC<CartPageProps> = ({
   cart,
   products = [],
@@ -69,9 +87,53 @@ export const CartPage: React.FC<CartPageProps> = ({
   );
 
   const [copied, setCopied] = useState(false);
-  const [expandedAddSizeIdx, setExpandedAddSizeIdx] = useState<number | null>(null);
+  const [expandedAddProduct, setExpandedAddProduct] = useState<string | null>(null);
   const [newSizeChoice, setNewSizeChoice] = useState<string>('');
-  const [newSizeQty, setNewSizeQty] = useState<number>(10);
+  const [newSizeQty, setNewSizeQty] = useState<number>(1);
+
+  // Group cart items by product name so each shoe has one clean container
+  const groupedCart = useMemo(() => {
+    const groups: Record<string, GroupedCartProduct> = {};
+
+    cart.forEach((item, index) => {
+      const key = item.name;
+      const unitPrice = parsePrice(item.price);
+      const itemTotal = unitPrice * item.quantity;
+      const matchedProduct = products.find((p) => p.name === item.name);
+      const availableSizes =
+        matchedProduct?.sizes && matchedProduct.sizes.length > 0
+          ? matchedProduct.sizes
+          : item.availableSizes && item.availableSizes.length > 0
+          ? item.availableSizes
+          : ['IND 5', 'IND 6', 'IND 7', 'IND 8', 'IND 9', 'IND 10', 'IND 11'];
+
+      if (!groups[key]) {
+        groups[key] = {
+          name: item.name,
+          category: item.category,
+          price: item.price,
+          unitPrice,
+          image: item.image,
+          tag: item.tag,
+          availableSizes,
+          totalQuantity: 0,
+          totalAmount: 0,
+          sizes: [],
+        };
+      }
+
+      groups[key].totalQuantity += item.quantity;
+      groups[key].totalAmount += itemTotal;
+      groups[key].sizes.push({
+        originalIndex: index,
+        selectedSize: item.selectedSize || availableSizes[0] || 'IND 8',
+        quantity: item.quantity,
+        itemTotal,
+      });
+    });
+
+    return Object.values(groups);
+  }, [cart, products]);
 
   const generateWhatsAppOrderLink = () => {
     let message = `*Hi Akshat Enterprises, I would like to place an order from your website:*\n\n`;
@@ -167,87 +229,155 @@ export const CartPage: React.FC<CartPageProps> = ({
           {/* Items List */}
           <div className="cart-items-column">
             <div className="cart-items-header">
-              <span>Product Details</span>
-              <span>Quantity & Price</span>
+              <span>Product & Sizing Breakdown</span>
+              <span>Subtotals</span>
             </div>
 
             <div className="cart-items-list">
-              {cart.map((item, index) => {
-                const itemTotal = parsePrice(item.price) * item.quantity;
-                const matchedProduct = products.find((p) => p.name === item.name);
-                const availableSizes = matchedProduct?.sizes && matchedProduct.sizes.length > 0
-                  ? matchedProduct.sizes
-                  : ['IND 5', 'IND 6', 'IND 7', 'IND 8', 'IND 9', 'IND 10', 'IND 11'];
-
-                const sameProductItems = cart.filter((it) => it.name === item.name);
-                const isMultiSize = sameProductItems.length > 1;
-                const sameProductTotalPairs = sameProductItems.reduce((acc, it) => acc + it.quantity, 0);
+              {groupedCart.map((group) => {
+                const isMultiSize = group.sizes.length > 1;
 
                 return (
-                  <article className="cart-item-card" key={`${item.name}-${item.selectedSize || index}`}>
-                    <div className="cart-item-thumb">
-                      <img src={item.image} alt={item.name} />
-                      {item.tag && <span className="cart-item-tag">{item.tag}</span>}
-                    </div>
+                  <article className="cart-grouped-card" key={group.name}>
+                    {/* Top Grouped Header */}
+                    <div className="cart-grouped-top">
+                      <div className="cart-item-thumb">
+                        <img src={group.image} alt={group.name} />
+                        {group.tag && <span className="cart-item-tag">{group.tag}</span>}
+                      </div>
 
-                    <div className="cart-item-info">
-                      <div className="cart-item-meta">
+                      <div className="cart-grouped-meta">
                         {isMultiSize && (
                           <div className="cart-multi-size-tag">
-                            <span>📦 Multi-Size Order: {sameProductTotalPairs} pairs of this shoe in cart</span>
+                            <span>📦 Multi-Size Order: {group.totalQuantity} pairs of this shoe in cart</span>
                           </div>
                         )}
-                        <span className="cart-item-category">{item.category}</span>
-                        <h3>{item.name}</h3>
+                        <span className="cart-item-category">{group.category}</span>
+                        <h3 className="cart-grouped-title">{group.name}</h3>
                         <span className="cart-item-unit-price">
-                          {item.price} <small>per pair</small>
+                          {group.price} <small>per pair</small>
                         </span>
+                      </div>
+                    </div>
 
-                        {/* Interactive Retailer Size Selector */}
-                        <div className="cart-size-select-wrap">
-                          <span className="cart-size-select-label">Size:</span>
-                          <select
-                            className="cart-size-dropdown"
-                            value={item.selectedSize || availableSizes[0]}
-                            onChange={(e) => onUpdateItemSize && onUpdateItemSize(index, e.target.value)}
-                            title="Switch size"
+                    {/* Sizing & Quantity Breakdown inside the single container */}
+                    <div className="cart-grouped-sizes-box">
+                      <div className="cart-grouped-sizes-header">
+                        <span className="col-lbl-size">Size</span>
+                        <span className="col-lbl-qty">Quantity</span>
+                        <span className="col-lbl-subtotal">Subtotal</span>
+                        <span className="col-lbl-remove"></span>
+                      </div>
+
+                      <div className="cart-grouped-sizes-list">
+                        {group.sizes.map((sEntry) => (
+                          <div
+                            className="cart-size-row"
+                            key={`${group.name}-${sEntry.selectedSize}-${sEntry.originalIndex}`}
                           >
-                            {availableSizes.map((sz) => (
-                              <option key={sz} value={sz}>{sz}</option>
-                            ))}
-                          </select>
-                        </div>
+                            <div className="cart-size-cell-size">
+                              <select
+                                className="cart-size-dropdown"
+                                value={sEntry.selectedSize}
+                                onChange={(e) =>
+                                  onUpdateItemSize && onUpdateItemSize(sEntry.originalIndex, e.target.value)
+                                }
+                                title="Switch size"
+                              >
+                                {group.availableSizes.map((sz) => (
+                                  <option key={sz} value={sz}>
+                                    {sz}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
 
-                        {/* Quick Retailer Add Another Size Button */}
-                        <div>
-                          <button
-                            type="button"
-                            className="cart-add-another-size-btn"
-                            onClick={() => {
-                              if (expandedAddSizeIdx === index) {
-                                setExpandedAddSizeIdx(null);
-                              } else {
-                                setExpandedAddSizeIdx(index);
-                                const otherSize = availableSizes.find((s) => s !== item.selectedSize) || availableSizes[0];
-                                setNewSizeChoice(otherSize);
-                                setNewSizeQty(10);
-                              }
-                            }}
-                          >
-                            <Plus size={13} /> Add another size for this shoe
-                          </button>
-                        </div>
+                            <div className="cart-size-cell-qty">
+                              <div className="cart-stepper" aria-label="Quantity Controls">
+                                <button
+                                  type="button"
+                                  onClick={() => onUpdateQuantity(sEntry.originalIndex, -1)}
+                                  aria-label="Decrease quantity"
+                                  title="Decrease quantity"
+                                >
+                                  <Minus size={15} />
+                                </button>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  max="9999"
+                                  className="cart-qty-num-input"
+                                  value={sEntry.quantity}
+                                  onChange={(e) => {
+                                    const val = parseInt(e.target.value, 10);
+                                    if (!isNaN(val) && val > 0 && onSetItemQuantity) {
+                                      onSetItemQuantity(sEntry.originalIndex, val);
+                                    }
+                                  }}
+                                  aria-label={`Quantity for ${group.name} size ${sEntry.selectedSize}`}
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => onUpdateQuantity(sEntry.originalIndex, 1)}
+                                  aria-label="Increase quantity"
+                                  title="Increase quantity"
+                                >
+                                  <Plus size={15} />
+                                </button>
+                              </div>
+                            </div>
 
-                        {/* Inline Add Size Box */}
-                        {expandedAddSizeIdx === index && (
+                            <div className="cart-size-cell-subtotal">
+                              <strong>{formatPrice(sEntry.itemTotal)}</strong>
+                            </div>
+
+                            <div className="cart-size-cell-action">
+                              <button
+                                type="button"
+                                className="cart-remove-btn"
+                                onClick={() => onRemoveItem(sEntry.originalIndex)}
+                                aria-label={`Remove size ${sEntry.selectedSize}`}
+                                title="Remove this size"
+                              >
+                                <Trash2 size={17} />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Add Another Size Inline Button / Form */}
+                      <div className="cart-grouped-add-size-wrap">
+                        <button
+                          type="button"
+                          className="cart-add-another-size-btn"
+                          onClick={() => {
+                            if (expandedAddProduct === group.name) {
+                              setExpandedAddProduct(null);
+                            } else {
+                              const remaining = group.availableSizes.filter(
+                                (sz) => !group.sizes.some((s) => s.selectedSize === sz)
+                              );
+                              setNewSizeChoice(remaining[0] || group.availableSizes[0] || 'IND 8');
+                              setNewSizeQty(1);
+                              setExpandedAddProduct(group.name);
+                            }
+                          }}
+                        >
+                          <Plus size={13} /> Add another size for this shoe
+                        </button>
+
+                        {expandedAddProduct === group.name && (
                           <div className="cart-inline-add-size-box">
                             <span style={{ fontSize: '12px', fontWeight: 600 }}>Size:</span>
                             <select
                               value={newSizeChoice}
                               onChange={(e) => setNewSizeChoice(e.target.value)}
                             >
-                              {availableSizes.map((s) => (
-                                <option key={s} value={s}>{s}</option>
+                              {group.availableSizes.map((s) => (
+                                <option key={s} value={s}>
+                                  {s}
+                                </option>
                               ))}
                             </select>
                             <span style={{ fontSize: '12px', fontWeight: 600 }}>Qty:</span>
@@ -264,9 +394,9 @@ export const CartPage: React.FC<CartPageProps> = ({
                               className="cart-inline-add-btn"
                               onClick={() => {
                                 if (onAddAnotherSize) {
-                                  onAddAnotherSize(item.name, newSizeChoice, newSizeQty);
+                                  onAddAnotherSize(group.name, newSizeChoice, newSizeQty);
                                 }
-                                setExpandedAddSizeIdx(null);
+                                setExpandedAddProduct(null);
                               }}
                             >
                               + Add to Order
@@ -274,7 +404,7 @@ export const CartPage: React.FC<CartPageProps> = ({
                             <button
                               type="button"
                               className="cart-inline-cancel-btn"
-                              onClick={() => setExpandedAddSizeIdx(null)}
+                              onClick={() => setExpandedAddProduct(null)}
                             >
                               Cancel
                             </button>
@@ -282,51 +412,14 @@ export const CartPage: React.FC<CartPageProps> = ({
                         )}
                       </div>
 
-                      <div className="cart-item-actions">
-                        {/* Stepper with Direct Numeric Input */}
-                        <div className="cart-stepper" aria-label="Quantity Controls">
-                          <button
-                            onClick={() => onUpdateQuantity(index, -1)}
-                            aria-label="Decrease quantity"
-                            title="Decrease quantity"
-                          >
-                            <Minus size={15} />
-                          </button>
-                          <input
-                            type="number"
-                            min="1"
-                            max="9999"
-                            className="cart-qty-num-input"
-                            value={item.quantity}
-                            onChange={(e) => {
-                              const val = parseInt(e.target.value, 10);
-                              if (!isNaN(val) && val > 0 && onSetItemQuantity) {
-                                onSetItemQuantity(index, val);
-                              }
-                            }}
-                            aria-label={`Quantity for ${item.name}`}
-                          />
-                          <button
-                            onClick={() => onUpdateQuantity(index, 1)}
-                            aria-label="Increase quantity"
-                            title="Increase quantity"
-                          >
-                            <Plus size={15} />
-                          </button>
-                        </div>
-
-                        <div className="cart-item-total-price">
-                          <strong>{formatPrice(itemTotal)}</strong>
-                        </div>
-
-                        <button
-                          className="cart-remove-btn"
-                          onClick={() => onRemoveItem(index)}
-                          aria-label={`Remove ${item.name}`}
-                          title="Remove item"
-                        >
-                          <Trash2 size={17} />
-                        </button>
+                      {/* Shoe Total inside the container */}
+                      <div className="cart-grouped-foot-total">
+                        <span className="cart-grouped-foot-label">Total for this shoe:</span>
+                        <span className="cart-grouped-foot-badge">
+                          {group.totalQuantity} {group.totalQuantity === 1 ? 'pair' : 'pairs'} ({group.sizes.length} {group.sizes.length === 1 ? 'size' : 'sizes'})
+                        </span>
+                        <span className="cart-grouped-foot-divider">•</span>
+                        <strong className="cart-grouped-foot-amount">{formatPrice(group.totalAmount)}</strong>
                       </div>
                     </div>
                   </article>

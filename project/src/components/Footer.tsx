@@ -79,9 +79,6 @@ export function Footer({ onOpenLegal }: FooterProps) {
             <span>•</span>
             <button type="button" onClick={() => handleOpen('grievance')}>Compliance</button>
           </div>
-          <div className="footer-social">
-            <a href="#instagram" aria-label="Instagram"><Instagram size={18} /></a>
-          </div>
         </div>
       </footer>
 
