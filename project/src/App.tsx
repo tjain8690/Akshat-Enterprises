@@ -36,6 +36,8 @@ import { ProductsPage } from './pages/ProductsPage';
 import { ProductCard } from './components/ProductCard';
 import { ProductDetailModal } from './components/ProductDetailModal';
 import { ProductZoomModal } from './components/ProductZoomModal';
+import { QuickAddToCartModal } from './components/QuickAddToCartModal';
+import { LegalModal, LegalModalTab } from './components/LegalModal';
 import { ProductDescriptionPage } from './pages/ProductDescriptionPage';
 import {
   loadProducts,
@@ -148,6 +150,18 @@ export default function App() {
 
   // Product Zoom Magnifier Modal (Opens on Card Image Click)
   const [zoomModalProduct, setZoomModalProduct] = useState<Product | null>(null);
+
+  // Single Product Quick Add Modal (Image 1 Desktop / Image 2 Mobile Bottom Sheet)
+  const [quickAddProduct, setQuickAddProduct] = useState<Product | null>(null);
+
+  // Legal, Compliance & Policies Modal (Terms, Privacy, Shipping, Grievance)
+  const [legalModalOpen, setLegalModalOpen] = useState(false);
+  const [legalModalTab, setLegalModalTab] = useState<LegalModalTab>('terms');
+
+  const handleOpenLegal = (tab: LegalModalTab) => {
+    setLegalModalTab(tab);
+    setLegalModalOpen(true);
+  };
 
   // Category sidebar popup drawer (slides left to right)
   const [categorySidebarOpen, setCategorySidebarOpen] = useState(false);
@@ -514,7 +528,77 @@ export default function App() {
       ];
     });
     showToast(`Added ${qtyToAdd > 1 ? `${qtyToAdd}x ` : ''}"${product.name}" (${chosenSize}) to cart!`);
-    setCartDrawerOpen(true);
+    // Note: Do not auto-open right-side cart drawer per user requirement
+  };
+
+  const handleBatchAddToCart = (product: Product, items: { size: string; quantity: number }[]) => {
+    if (!items || items.length === 0) return;
+    setCart((prevCart) => {
+      const updated = [...prevCart];
+      items.forEach(({ size, quantity }) => {
+        if (quantity <= 0) return;
+        const existingIdx = updated.findIndex(
+          (item) => item.name === product.name && item.selectedSize === size
+        );
+        if (existingIdx > -1) {
+          updated[existingIdx] = {
+            ...updated[existingIdx],
+            quantity: updated[existingIdx].quantity + quantity,
+          };
+        } else {
+          updated.push({
+            name: product.name,
+            category: product.category,
+            price: product.price,
+            image: product.image,
+            tag: product.tag,
+            quantity: quantity,
+            selectedSize: size,
+          });
+        }
+      });
+      return updated;
+    });
+    const totalAdded = items.reduce((sum, it) => sum + it.quantity, 0);
+    showToast(`Added ${totalAdded} pairs of "${product.name}" (${items.map((i) => `${i.quantity}x ${i.size}`).join(', ')}) to cart!`);
+  };
+
+  const handleSetItemQuantity = (index: number, quantity: number) => {
+    setCart((prevCart) => {
+      const item = prevCart[index];
+      if (!item) return prevCart;
+      const validQty = Math.max(1, quantity);
+      const updated = [...prevCart];
+      updated[index] = { ...item, quantity: validQty };
+      return updated;
+    });
+  };
+
+  const handleUpdateItemSize = (index: number, newSize: string) => {
+    setCart((prevCart) => {
+      const item = prevCart[index];
+      if (!item || item.selectedSize === newSize) return prevCart;
+      const existingIdx = prevCart.findIndex(
+        (it, idx) => idx !== index && it.name === item.name && it.selectedSize === newSize
+      );
+      if (existingIdx > -1) {
+        const updated = [...prevCart];
+        updated[existingIdx] = {
+          ...updated[existingIdx],
+          quantity: updated[existingIdx].quantity + item.quantity,
+        };
+        return updated.filter((_, idx) => idx !== index);
+      }
+      const updated = [...prevCart];
+      updated[index] = { ...item, selectedSize: newSize };
+      return updated;
+    });
+  };
+
+  const handleAddAnotherSize = (itemName: string, newSize: string, quantity: number) => {
+    const baseProduct = products.find((p) => p.name === itemName) || cart.find((i) => i.name === itemName);
+    if (!baseProduct) return;
+    handleAddToCart(baseProduct as Product, newSize, quantity);
   };
 
   const handleUpdateQuantity = (index: number, delta: number) => {
@@ -758,12 +842,9 @@ export default function App() {
                 e.preventDefault();
                 handleLogoClick();
               }}
-              aria-label="APEX by Akshat Enterprises"
+              aria-label="Akshat Enterprises"
             >
               <div className="ax-brand-group">
-                <span className="ax-brand-title">
-                  APE<span className="ax-brand-x">X</span>
-                </span>
                 <img
                   src="/AE-logo.png"
                   alt="Akshat Enterprises"
@@ -1040,7 +1121,11 @@ export default function App() {
         {currentPath === '/cart' ? (
           <CartPage
             cart={cart}
+            products={products}
             onUpdateQuantity={handleUpdateQuantity}
+            onSetItemQuantity={handleSetItemQuantity}
+            onUpdateItemSize={handleUpdateItemSize}
+            onAddAnotherSize={handleAddAnotherSize}
             onRemoveItem={handleRemoveItem}
             onClearCart={handleClearCart}
             onNavigateHome={() => navigateTo('/')}
@@ -1052,6 +1137,7 @@ export default function App() {
             products={products}
             cart={cart}
             onAddToCart={handleAddToCart}
+            onOpenQuickAdd={(prod) => setQuickAddProduct(prod)}
             onToggleWishlist={handleToggleWishlist}
             onClearWishlist={handleClearWishlist}
             onNavigateHome={() => navigateTo('/')}
@@ -1079,6 +1165,7 @@ export default function App() {
             cart={cart}
             dark={dark}
             onAddToCart={handleAddToCart}
+            onOpenQuickAdd={(prod) => setQuickAddProduct(prod)}
             onUpdateQuantity={handleUpdateQuantity}
             onNavigateHome={() => navigateTo('/')}
             navigateTo={navigateTo}
@@ -1095,6 +1182,7 @@ export default function App() {
             onNavigateHome={() => navigateTo('/')}
             navigateTo={navigateTo}
             onOpenZoomModal={(prod) => setZoomModalProduct(prod)}
+            onOpenQuickAdd={(prod) => setQuickAddProduct(prod)}
             dark={dark}
           />
         ) : (
@@ -1311,6 +1399,7 @@ export default function App() {
                         wishlist={wishlist}
                         onToggleWishlist={handleToggleWishlist}
                         onAddToCart={handleAddToCart}
+                        onOpenQuickAdd={(prod) => setQuickAddProduct(prod)}
                         onUpdateQuantity={handleUpdateQuantity}
                         onQuickView={(prod) => setZoomModalProduct(prod)}
                         onOpenZoom={(prod) => setZoomModalProduct(prod)}
@@ -1509,9 +1598,6 @@ export default function App() {
           {/* Column 1: APEX Brand + Checkmarks */}
           <div className="ax-footer-brand">
             <div className="ax-brand-group" style={{ marginBottom: '16px' }}>
-              <span className="ax-brand-title" style={{ color: '#fff', fontSize: '28px' }}>
-                APE<span className="ax-brand-x">X</span>
-              </span>
               <img src="/AE-logo.png" alt="Akshat Enterprises" className="ax-footer-logo" />
             </div>
 
@@ -1549,9 +1635,9 @@ export default function App() {
             <h4>CUSTOMER CARE</h4>
             <ul className="ax-footer-links">
               <li><a href={whatsappLink('Hi Akshat Enterprises, I need help with an order.')}>Contact Us</a></li>
-              <li><a href="#location">Shipping Info</a></li>
-              <li><a href="#location">Returns &amp; Exchanges</a></li>
-              <li><a href="#location">FAQ</a></li>
+              <li><button type="button" onClick={() => handleOpenLegal('shipping')}>Shipping Info</button></li>
+              <li><button type="button" onClick={() => handleOpenLegal('shipping')}>Returns &amp; Exchanges</button></li>
+              <li><button type="button" onClick={() => handleOpenLegal('grievance')}>Grievance Officer</button></li>
               <li><button type="button" onClick={() => navigateTo('/cart')}>Size Guide</button></li>
             </ul>
           </div>
@@ -1568,6 +1654,17 @@ export default function App() {
             </ul>
           </div>
 
+          {/* Column 5: STORE VISIT */}
+          <div>
+            <h4>STORE VISIT</h4>
+            <ul className="ax-footer-links">
+              <li><span>Shop 2, Janta Market</span></li>
+              <li><span>Turbhe, Navi Mumbai</span></li>
+              <li><span>Mon–Sat: 10am – 8pm</span></li>
+              <li><a href="https://maps.google.com" target="_blank" rel="noreferrer" style={{ color: 'var(--ax-accent)', fontWeight: 700 }}>Get Directions ↗</a></li>
+            </ul>
+          </div>
+
           {/* Column 5: NEWSLETTER */}
           <div className="ax-footer-news">
             <h4>NEWSLETTER</h4>
@@ -1576,7 +1673,7 @@ export default function App() {
               className="ax-newsletter"
               onSubmit={(e) => {
                 e.preventDefault();
-                showToast('Thank you for subscribing to APEX crew!');
+                showToast('Thank you for subscribing to Akshat Enterprises!');
               }}
             >
               <input type="email" placeholder="Enter your email" required />
@@ -1598,13 +1695,19 @@ export default function App() {
 
         <div className="ax-footer-bottom">
           <div className="ax-footer-bottom-inner">
-            <p>© {new Date().getFullYear()} Akshat Enterprises. All Rights Reserved.</p>
+            <p>© {new Date().getFullYear()} Akshat Enterprises. All Rights Reserved. • GSTIN: 27AABFA2488R1ZM</p>
             <div className="ax-footer-bottom-links">
-              <button type="button" onClick={() => showToast('Terms & Conditions: Genuine Products Guarantee')}>
+              <button type="button" onClick={() => handleOpenLegal('terms')}>
                 Terms &amp; Conditions
               </button>
-              <button type="button" onClick={() => showToast('Privacy Policy: All customer info is protected')}>
+              <button type="button" onClick={() => handleOpenLegal('privacy')}>
                 Privacy Policy
+              </button>
+              <button type="button" onClick={() => handleOpenLegal('shipping')}>
+                Shipping &amp; Returns
+              </button>
+              <button type="button" onClick={() => handleOpenLegal('grievance')}>
+                Grievance &amp; Disclosures
               </button>
             </div>
           </div>
@@ -1911,6 +2014,32 @@ export default function App() {
           onAddToCart={handleAddToCart}
         />
       )}
+
+      {/* ── SINGLE PRODUCT QUICK ADD POPUP MODAL (Desktop Image 1 / Mobile Image 2) ── */}
+      {quickAddProduct && (
+        <QuickAddToCartModal
+          product={quickAddProduct}
+          isOpen={Boolean(quickAddProduct)}
+          onClose={() => setQuickAddProduct(null)}
+          onAddToCart={(product, size, quantity) => {
+            handleAddToCart(product, size, quantity);
+          }}
+          onBatchAddToCart={(product, items) => {
+            handleBatchAddToCart(product, items);
+          }}
+          onViewDetails={(productId) => {
+            setQuickAddProduct(null);
+            navigateTo(`/product-description?id=${productId}`);
+          }}
+        />
+      )}
+
+      {/* ── STATUTORY LEGAL, PRIVACY & COMPLIANCE MODAL (India E-Commerce, DPDP Act 2023) ── */}
+      <LegalModal
+        isOpen={legalModalOpen}
+        onClose={() => setLegalModalOpen(false)}
+        initialTab={legalModalTab}
+      />
 
       {/* ── FLOATING WHATSAPP BUTTON ── */}
       <a

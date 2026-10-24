@@ -46,6 +46,7 @@ export function ProductZoomModal({
 
   const activeImage = angles[selectedAngleIdx] || product.image;
   const angleLabels = ['Front View', 'Side Profile', 'Sole / Heel', 'Lifestyle Angle'];
+  const angleShortLabels = ['Front', 'Side', 'Sole', 'Lifestyle'];
 
   return (
     <div
@@ -146,29 +147,29 @@ export function ProductZoomModal({
           </div>
         </div>
 
-        {/* ── 4 Angles Selector Bar & Actions ── */}
-        <div className="ax-zoom-thumbs-row">
-          <div className="ax-zoom-thumbs-list">
-            {angles.map((angleUrl, idx) => (
-              <button
-                key={idx}
-                type="button"
-                className={`ax-zoom-thumb-btn${idx === selectedAngleIdx ? ' active' : ''}`}
-                onClick={() => setSelectedAngleIdx(idx)}
-              >
-                <img src={angleUrl} alt={`Angle ${idx + 1}`} />
-                <span>{angleLabels[idx] || `Angle ${idx + 1}`}</span>
-              </button>
-            ))}
+        {/* ── 4 Angles Selector Bar (Full width 4-column cards with no side padding) ── */}
+        <div className="ax-zoom-thumbs-list">
+          {angles.map((angleUrl, idx) => (
+            <button
+              key={idx}
+              type="button"
+              className={`ax-zoom-thumb-btn${idx === selectedAngleIdx ? ' active' : ''}`}
+              onClick={() => setSelectedAngleIdx(idx)}
+            >
+              <img src={angleUrl} alt={`Angle ${idx + 1}`} />
+              <span>{angleShortLabels[idx] || `Angle ${idx + 1}`}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* ── Dedicated Footer Actions Bar ── */}
+        <div className="ax-zoom-foot-actions">
+          <div className="ax-zoom-price-block">
+            {product.originalPrice && <del>{product.originalPrice}</del>}
+            <strong>{product.price}</strong>
           </div>
 
-          {/* Quick Footer Controls with minimal icons */}
-          <div className="ax-zoom-foot-actions">
-            <div className="ax-zoom-price-block">
-              {product.originalPrice && <del>{product.originalPrice}</del>}
-              <strong>{product.price}</strong>
-            </div>
-
+          <div className="ax-zoom-foot-btns">
             {onAddToCart && (
               <button
                 type="button"

@@ -36,6 +36,7 @@ interface ProductDescriptionPageProps {
   onNavigateHome: () => void;
   navigateTo: (path: string) => void;
   onOpenZoomModal: (product: Product) => void;
+  onOpenQuickAdd?: (product: Product) => void;
   dark?: boolean;
 }
 
@@ -50,6 +51,7 @@ export function ProductDescriptionPage({
   onNavigateHome,
   navigateTo,
   onOpenZoomModal,
+  onOpenQuickAdd,
   dark,
 }: ProductDescriptionPageProps) {
   const angles = getProductAngles(product);
@@ -198,9 +200,6 @@ Please confirm availability and shipment details.`;
                   <span className="ax-pdp-badge discount">-{discountPercent}% OFF</span>
                 )}
                 <span className="ax-pdp-badge hot">{product.tag || 'Bestseller'}</span>
-                <span className="ax-pdp-badge genuine">
-                  <ShieldCheck size={12} /> Certified Genuine
-                </span>
               </div>
 
               {/* Main Image Showcase */}
@@ -345,23 +344,21 @@ Please confirm availability and shipment details.`;
               </div>
             </div>
 
-            {/* Size Selector */}
-            <div className="ax-pdp-option-section">
+            {/* Quantity Stepper & Multi-Size Action */}
+            <div className="ax-pdp-option-section ax-pdp-qty-wrap">
               <div className="option-head">
-                <span className="section-label">Select Size (India / UK standard):</span>
-                <span className="size-guide-hint">True to size fit</span>
-              </div>
-              <div className="ax-pdp-size-pills">
-                {availableSizes.map((sz) => (
+                <span className="section-label">Quantity:</span>
+                {onOpenQuickAdd && (
                   <button
-                    key={sz}
                     type="button"
-                    className={`ax-pdp-size-btn${selectedSize === sz ? ' active' : ''}`}
-                    onClick={() => setSelectedSize(sz)}
+                    className="ax-pdp-multi-size-btn"
+                    onClick={() => onOpenQuickAdd(product)}
+                    title="Select multiple sizes and quantities for wholesale carton order"
                   >
-                    {sz}
+                    <Layers size={14} />
+                    <span>Wholesale Multi-Size Order</span>
                   </button>
-                ))}
+                )}
               </div>
             </div>
 
@@ -389,7 +386,13 @@ Please confirm availability and shipment details.`;
               <button
                 type="button"
                 className={`ax-pdp-add-btn${justAdded ? ' added' : ''}`}
-                onClick={handleAddToCartClick}
+                onClick={() => {
+                  if (onOpenQuickAdd) {
+                    onOpenQuickAdd(product);
+                  } else {
+                    handleAddToCartClick();
+                  }
+                }}
               >
                 {justAdded ? (
                   <>
@@ -428,27 +431,18 @@ Please confirm availability and shipment details.`;
               </button>
             </div>
 
-            {/* Direct Instant Order Buttons */}
+            {/* Direct Order on WhatsApp Only */}
             <div className="ax-pdp-direct-actions">
-              <button
-                type="button"
-                className="ax-pdp-buy-now-btn"
-                onClick={handleBuyNow}
-              >
-                <CreditCard size={18} />
-                <span>Instant Checkout</span>
-              </button>
-
               <a
                 href={whatsappLink(
-                  `Hi Akshat Enterprises, I want to order ${product.name} (${product.price}, Size: ${selectedSize}, Color: ${selectedColor}, Qty: ${quantity}). Please share delivery & payment details.`
+                  `Hi Akshat Enterprises, I want to order ${product.name} (${product.price}, Color: ${selectedColor}, Qty: ${quantity}). Please share delivery & wholesale details.`
                 )}
                 target="_blank"
                 rel="noreferrer"
                 className="ax-pdp-whatsapp-btn"
                 title="Direct WhatsApp Order"
               >
-                <MessageCircle size={18} />
+                <MessageCircle size={20} />
                 <span>Order on WhatsApp</span>
               </a>
             </div>
@@ -530,6 +524,7 @@ Please confirm availability and shipment details.`;
                   wishlist={wishlist}
                   onToggleWishlist={onToggleWishlist}
                   onAddToCart={onAddToCart}
+                  onOpenQuickAdd={onOpenQuickAdd}
                   onUpdateQuantity={onUpdateQuantity}
                   onQuickView={() => onOpenZoomModal(p)}
                   onViewProduct={(id) => navigateTo(`/product-description?id=${id}`)}

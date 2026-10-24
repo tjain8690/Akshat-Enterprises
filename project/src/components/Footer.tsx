@@ -1,8 +1,26 @@
+import { useState } from 'react';
 import { MapPin, Phone, MessageCircle, Instagram } from 'lucide-react';
-import { whatsappLink, secondPhone } from '../constants';
+import { whatsappLink } from '../constants';
 import { Link } from 'react-router-dom';
+import { LegalModal, LegalModalTab } from './LegalModal';
 
-export function Footer() {
+interface FooterProps {
+  onOpenLegal?: (tab: LegalModalTab) => void;
+}
+
+export function Footer({ onOpenLegal }: FooterProps) {
+  const [internalModalOpen, setInternalModalOpen] = useState(false);
+  const [internalTab, setInternalTab] = useState<LegalModalTab>('terms');
+
+  const handleOpen = (tab: LegalModalTab) => {
+    if (onOpenLegal) {
+      onOpenLegal(tab);
+    } else {
+      setInternalTab(tab);
+      setInternalModalOpen(true);
+    }
+  };
+
   return (
     <>
       <div className="trust-strip">
@@ -34,11 +52,11 @@ export function Footer() {
             <a href={whatsappLink('Hi Akshat Enterprises, I have a question.')}><MessageCircle size={16} /> WhatsApp us</a>
           </div>
           <div className="footer-links">
-            <span>Explore</span>
-            <Link to="/">Shop</Link>
-            <Link to="/products">All Products</Link>
-            <Link to="/cart">Cart</Link>
-            <Link to="/admin">Admin</Link>
+            <span>Customer Care &amp; Legal</span>
+            <button type="button" className="footer-link-btn" onClick={() => handleOpen('terms')}>Terms &amp; Conditions</button>
+            <button type="button" className="footer-link-btn" onClick={() => handleOpen('privacy')}>Privacy Policy</button>
+            <button type="button" className="footer-link-btn" onClick={() => handleOpen('shipping')}>Shipping &amp; Returns</button>
+            <button type="button" className="footer-link-btn" onClick={() => handleOpen('grievance')}>Grievance Officer</button>
           </div>
           <div className="footer-visit">
             <span>Visit Us</span>
@@ -51,12 +69,28 @@ export function Footer() {
           </div>
         </div>
         <div className="footer-bottom">
-          <p>© {new Date().getFullYear()} Akshat Enterprises. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} Akshat Enterprises. All rights reserved. • GSTIN: 27AABFA2488R1ZM</p>
+          <div className="footer-legal-links">
+            <button type="button" onClick={() => handleOpen('terms')}>Terms</button>
+            <span>•</span>
+            <button type="button" onClick={() => handleOpen('privacy')}>Privacy</button>
+            <span>•</span>
+            <button type="button" onClick={() => handleOpen('shipping')}>Shipping</button>
+            <span>•</span>
+            <button type="button" onClick={() => handleOpen('grievance')}>Compliance</button>
+          </div>
           <div className="footer-social">
             <a href="#instagram" aria-label="Instagram"><Instagram size={18} /></a>
           </div>
         </div>
       </footer>
+
+      {/* Internal popup fallback if standalone */}
+      <LegalModal
+        isOpen={internalModalOpen}
+        onClose={() => setInternalModalOpen(false)}
+        initialTab={internalTab}
+      />
     </>
   );
 }

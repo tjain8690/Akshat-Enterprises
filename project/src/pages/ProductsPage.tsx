@@ -48,6 +48,7 @@ interface ProductsPageProps {
   cart: CartItem[];
   dark?: boolean;
   onAddToCart: (product: Product, size: string) => void;
+  onOpenQuickAdd?: (product: Product) => void;
   onUpdateQuantity: (index: number, delta: number) => void;
   onNavigateHome?: () => void;
   navigateTo?: (path: string) => void;
@@ -59,6 +60,7 @@ export function ProductsPage({
   cart,
   dark: _dark,
   onAddToCart,
+  onOpenQuickAdd,
   onUpdateQuantity,
   onNavigateHome,
   navigateTo,
@@ -215,6 +217,10 @@ export function ProductsPage({
     cardSizes[product.id] ?? product.sizes?.[0] ?? '';
 
   const handleAddToCart = (product: Product) => {
+    if (onOpenQuickAdd) {
+      onOpenQuickAdd(product);
+      return;
+    }
     const size = getCardSize(product);
     onAddToCart(product, size);
   };

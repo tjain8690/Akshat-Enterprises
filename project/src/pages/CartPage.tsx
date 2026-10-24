@@ -15,6 +15,8 @@ import {
   Check,
 } from 'lucide-react';
 
+import type { Product } from '../types';
+
 export type CartItem = {
   name: string;
   category: string;
@@ -23,11 +25,16 @@ export type CartItem = {
   tag?: string;
   quantity: number;
   selectedSize?: string;
+  availableSizes?: string[];
 };
 
 type CartPageProps = {
   cart: CartItem[];
+  products?: Product[];
   onUpdateQuantity: (index: number, delta: number) => void;
+  onSetItemQuantity?: (index: number, quantity: number) => void;
+  onUpdateItemSize?: (index: number, newSize: string) => void;
+  onAddAnotherSize?: (itemName: string, newSize: string, quantity: number) => void;
   onRemoveItem: (index: number) => void;
   onClearCart: () => void;
   onNavigateHome: () => void;
@@ -45,7 +52,11 @@ export const formatPrice = (amount: number): string => {
 
 export const CartPage: React.FC<CartPageProps> = ({
   cart,
+  products = [],
   onUpdateQuantity,
+  onSetItemQuantity,
+  onUpdateItemSize,
+  onAddAnotherSize,
   onRemoveItem,
   onClearCart,
   onNavigateHome,
@@ -58,6 +69,9 @@ export const CartPage: React.FC<CartPageProps> = ({
   );
 
   const [copied, setCopied] = useState(false);
+  const [expandedAddSizeIdx, setExpandedAddSizeIdx] = useState<number | null>(null);
+  const [newSizeChoice, setNewSizeChoice] = useState<string>('');
+  const [newSizeQty, setNewSizeQty] = useState<number>(10);
 
   const generateWhatsAppOrderLink = () => {
     let message = `*Hi Akshat Enterprises, I would like to place an order from your website:*\n\n`;
@@ -68,7 +82,7 @@ export const CartPage: React.FC<CartPageProps> = ({
       if (item.selectedSize) {
         message += `   • Size: ${item.selectedSize}\n`;
       }
-      message += `   • Qty: ${item.quantity} × ${item.price} = ${formatPrice(itemSubtotal)}\n\n`;
+      message += `   • Qty: ${item.quantity} pairs × ${item.price} = ${formatPrice(itemSubtotal)}\n\n`;
     });
     message += `━━━━━━━━━━━━━━━━━━━━━\n`;
     message += `*Total Order Value:* ${formatPrice(subtotal)} (${totalItemsCount} ${totalItemsCount === 1 ? 'pair' : 'pairs'})\n\n`;
@@ -160,6 +174,15 @@ export const CartPage: React.FC<CartPageProps> = ({
             <div className="cart-items-list">
               {cart.map((item, index) => {
                 const itemTotal = parsePrice(item.price) * item.quantity;
+                const matchedProduct = products.find((p) => p.name === item.name);
+                const availableSizes = matchedProduct?.sizes && matchedProduct.sizes.length > 0
+                  ? matchedProduct.sizes
+                  : ['IND 5', 'IND 6', 'IND 7', 'IND 8', 'IND 9', 'IND 10', 'IND 11'];
+
+                const sameProductItems = cart.filter((it) => it.name === item.name);
+                const isMultiSize = sameProductItems.length > 1;
+                const sameProductTotalPairs = sameProductItems.reduce((acc, it) => acc + it.quantity, 0);
+
                 return (
                   <article className="cart-item-card" key={`${item.name}-${item.selectedSize || index}`}>
                     <div className="cart-item-thumb">
@@ -169,19 +192,98 @@ export const CartPage: React.FC<CartPageProps> = ({
 
                     <div className="cart-item-info">
                       <div className="cart-item-meta">
+                        {isMultiSize && (
+                          <div className="cart-multi-size-tag">
+                            <span>📦 Multi-Size Order: {sameProductTotalPairs} pairs of this shoe in cart</span>
+                          </div>
+                        )}
                         <span className="cart-item-category">{item.category}</span>
                         <h3>{item.name}</h3>
                         <span className="cart-item-unit-price">
                           {item.price} <small>per pair</small>
                         </span>
-                        {item.selectedSize && (
-                          <span className="cart-item-size-badge">
-                            Size: <strong>{item.selectedSize}</strong>
-                          </span>
+
+                        {/* Interactive Retailer Size Selector */}
+                        <div className="cart-size-select-wrap">
+                          <span className="cart-size-select-label">Size:</span>
+                          <select
+                            className="cart-size-dropdown"
+                            value={item.selectedSize || availableSizes[0]}
+                            onChange={(e) => onUpdateItemSize && onUpdateItemSize(index, e.target.value)}
+                            title="Switch size"
+                          >
+                            {availableSizes.map((sz) => (
+                              <option key={sz} value={sz}>{sz}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* Quick Retailer Add Another Size Button */}
+                        <div>
+                          <button
+                            type="button"
+                            className="cart-add-another-size-btn"
+                            onClick={() => {
+                              if (expandedAddSizeIdx === index) {
+                                setExpandedAddSizeIdx(null);
+                              } else {
+                                setExpandedAddSizeIdx(index);
+                                const otherSize = availableSizes.find((s) => s !== item.selectedSize) || availableSizes[0];
+                                setNewSizeChoice(otherSize);
+                                setNewSizeQty(10);
+                              }
+                            }}
+                          >
+                            <Plus size={13} /> Add another size for this shoe
+                          </button>
+                        </div>
+
+                        {/* Inline Add Size Box */}
+                        {expandedAddSizeIdx === index && (
+                          <div className="cart-inline-add-size-box">
+                            <span style={{ fontSize: '12px', fontWeight: 600 }}>Size:</span>
+                            <select
+                              value={newSizeChoice}
+                              onChange={(e) => setNewSizeChoice(e.target.value)}
+                            >
+                              {availableSizes.map((s) => (
+                                <option key={s} value={s}>{s}</option>
+                              ))}
+                            </select>
+                            <span style={{ fontSize: '12px', fontWeight: 600 }}>Qty:</span>
+                            <input
+                              type="number"
+                              min="1"
+                              max="9999"
+                              className="cart-qty-num-input"
+                              value={newSizeQty}
+                              onChange={(e) => setNewSizeQty(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                            />
+                            <button
+                              type="button"
+                              className="cart-inline-add-btn"
+                              onClick={() => {
+                                if (onAddAnotherSize) {
+                                  onAddAnotherSize(item.name, newSizeChoice, newSizeQty);
+                                }
+                                setExpandedAddSizeIdx(null);
+                              }}
+                            >
+                              + Add to Order
+                            </button>
+                            <button
+                              type="button"
+                              className="cart-inline-cancel-btn"
+                              onClick={() => setExpandedAddSizeIdx(null)}
+                            >
+                              Cancel
+                            </button>
+                          </div>
                         )}
                       </div>
 
                       <div className="cart-item-actions">
+                        {/* Stepper with Direct Numeric Input */}
                         <div className="cart-stepper" aria-label="Quantity Controls">
                           <button
                             onClick={() => onUpdateQuantity(index, -1)}
@@ -190,7 +292,20 @@ export const CartPage: React.FC<CartPageProps> = ({
                           >
                             <Minus size={15} />
                           </button>
-                          <span className="cart-quantity">{item.quantity}</span>
+                          <input
+                            type="number"
+                            min="1"
+                            max="9999"
+                            className="cart-qty-num-input"
+                            value={item.quantity}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value, 10);
+                              if (!isNaN(val) && val > 0 && onSetItemQuantity) {
+                                onSetItemQuantity(index, val);
+                              }
+                            }}
+                            aria-label={`Quantity for ${item.name}`}
+                          />
                           <button
                             onClick={() => onUpdateQuantity(index, 1)}
                             aria-label="Increase quantity"

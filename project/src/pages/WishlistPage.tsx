@@ -22,6 +22,7 @@ interface WishlistPageProps {
   products: Product[];
   cart: CartItem[];
   onAddToCart: (product: Product, size?: string, quantity?: number) => void;
+  onOpenQuickAdd?: (product: Product) => void;
   onToggleWishlist: (productId: string) => void;
   onClearWishlist?: () => void;
   onNavigateHome: () => void;
@@ -34,6 +35,7 @@ export function WishlistPage({
   products,
   cart: _cart,
   onAddToCart,
+  onOpenQuickAdd,
   onToggleWishlist,
   onClearWishlist,
   onNavigateHome,
@@ -54,12 +56,16 @@ export function WishlistPage({
   };
 
   const handleAdd = (product: Product) => {
+    if (onOpenQuickAdd) {
+      onOpenQuickAdd(product);
+      return;
+    }
     const chosenSize = selectedSizes[product.id] || product.sizes?.[0] || 'IND 8';
     onAddToCart(product, chosenSize, 1);
     setAddedIds((prev) => ({ ...prev, [product.id]: true }));
     setTimeout(() => {
       setAddedIds((prev) => ({ ...prev, [product.id]: false }));
-    }, 1800);
+    }, 1500);
   };
 
   const handleAddAllToCart = () => {
@@ -351,7 +357,7 @@ export function WishlistPage({
             <ShieldCheck size={20} />
             <div>
               <strong>100% Genuine Quality</strong>
-              <p>Direct from Akshat Enterprises APEX Turbhe Store</p>
+              <p>Direct from Akshat Enterprises Turbhe Store</p>
             </div>
           </div>
           <div className="ax-perk-item">

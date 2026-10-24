@@ -222,7 +222,7 @@ Please confirm availability and dispatch!`;
               </span>
               <span className="ax-brand-badge-name">
                 {product.department === 'Jackets'
-                  ? 'APEX Workwear'
+                  ? 'Akshat Enterprises'
                   : 'PulseSneaks'}
               </span>
             </div>

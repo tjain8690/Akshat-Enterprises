@@ -60,6 +60,7 @@ interface ProductCardProps {
   wishlist?: string[];
   onToggleWishlist?: (productId: string) => void;
   onAddToCart?: (product: Product, size: string) => void;
+  onOpenQuickAdd?: (product: Product) => void;
   onUpdateQuantity?: (index: number, delta: number) => void;
   onQuickView?: (product: Product) => void;
   onOpenZoom?: (product: Product) => void;
@@ -73,6 +74,7 @@ export function ProductCard({
   wishlist = [],
   onToggleWishlist,
   onAddToCart,
+  onOpenQuickAdd,
   onUpdateQuantity,
   onQuickView,
   onOpenZoom,
@@ -102,6 +104,10 @@ export function ProductCard({
 
   const handleAdd = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (onOpenQuickAdd) {
+      onOpenQuickAdd(product);
+      return;
+    }
     if (onAddToCart) {
       onAddToCart(product, cardSize);
       setJustAdded(true);
