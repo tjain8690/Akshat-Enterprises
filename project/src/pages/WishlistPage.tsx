@@ -232,7 +232,12 @@ export function WishlistPage({
                   {/* Card Media */}
                   <div
                     className="ax-wishlist-media"
-                    onClick={() => onQuickView && onQuickView(product)}
+                    onClick={() => {
+                      window.history.pushState(null, '', `/product-description?id=${product.id}`);
+                      window.dispatchEvent(new PopStateEvent('popstate'));
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    style={{ cursor: 'pointer' }}
                   >
                     {product.tag && (
                       <span className="ax-card-badge">{product.tag}</span>
@@ -266,6 +271,7 @@ export function WishlistPage({
                           e.stopPropagation();
                           onQuickView(product);
                         }}
+                        title="Quick View Details"
                       >
                         <Eye size={13} /> View 4 Angles
                       </button>
@@ -280,7 +286,12 @@ export function WishlistPage({
 
                     <h3
                       className="ax-wishlist-product-name"
-                      onClick={() => onQuickView && onQuickView(product)}
+                      onClick={() => {
+                        window.history.pushState(null, '', `/product-description?id=${product.id}`);
+                        window.dispatchEvent(new PopStateEvent('popstate'));
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                      style={{ cursor: 'pointer' }}
                     >
                       {product.name}
                     </h3>

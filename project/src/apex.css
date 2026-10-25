@@ -4937,15 +4937,24 @@
    ========================================================================== */
 .ax-qa-overlay {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  height: 100dvh;
   z-index: 99999;
   background: rgba(15, 23, 42, 0.65);
   backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 16px;
   animation: axQaFadeIn 0.2s ease-out;
+  overscroll-behavior: contain;
+  touch-action: none;
 }
 
 @keyframes axQaFadeIn {
@@ -4958,14 +4967,18 @@
   color: #0f1111;
   width: 100%;
   max-width: 540px;
-  max-height: 90vh;
-  overflow-y: auto;
+  max-height: 86vh;
+  max-height: 86dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   border-radius: 16px;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
   position: relative;
-  padding: 24px;
+  padding: 24px 24px 0;
   box-sizing: border-box;
   animation: axQaScaleIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  touch-action: pan-y;
 }
 
 .app.dark .ax-qa-modal {
@@ -5026,6 +5039,7 @@
   align-items: flex-start;
   gap: 16px;
   padding-right: 32px;
+  flex-shrink: 0;
 }
 
 .ax-qa-thumb-wrap {
@@ -5122,6 +5136,7 @@
   border: 0;
   border-top: 1px solid #e2e8f0;
   margin: 18px 0 16px;
+  flex-shrink: 0;
 }
 
 .app.dark .ax-qa-divider {
@@ -5135,16 +5150,21 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
-  margin-bottom: 20px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  padding-right: 4px;
+  padding-bottom: 14px;
+  margin-bottom: 0;
 }
 
 .ax-qa-options-list {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  max-height: 290px;
-  overflow-y: auto;
-  padding-right: 4px;
 }
 
 /* Custom modern scrollbar */
@@ -5533,7 +5553,16 @@
   align-items: center;
   justify-content: flex-end;
   gap: 12px;
-  padding-top: 8px;
+  padding: 14px 0 20px;
+  border-top: 1px solid #e2e8f0;
+  flex-shrink: 0;
+  background: #ffffff;
+  z-index: 20;
+}
+
+.app.dark .ax-qa-footer-actions {
+  background: #1e222b;
+  border-top-color: #2e3644;
 }
 
 .ax-qa-cancel-btn {
@@ -5566,8 +5595,8 @@
 }
 
 .ax-qa-add-btn {
-  background: #0f172a;
-  border: 1.5px solid #0f172a;
+  background: #000000;
+  border: 1.5px solid #000000;
   border-radius: 9999px;
   padding: 11px 26px;
   font-size: 13.5px;
@@ -5579,14 +5608,14 @@
   justify-content: center;
   gap: 8px;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .ax-qa-add-btn:hover {
-  background: #1e293b;
-  border-color: #1e293b;
+  background: #1f2937;
+  border-color: #1f2937;
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.28);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.28);
 }
 
 .ax-qa-add-btn:active {
@@ -5601,17 +5630,17 @@
 }
 
 .app.dark .ax-qa-add-btn {
-  background: #38bdf8;
-  border-color: #38bdf8;
-  color: #0f172a;
-  box-shadow: 0 4px 12px rgba(56, 189, 248, 0.3);
+  background: #ffffff;
+  border-color: #ffffff;
+  color: #000000;
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
 }
 
 .app.dark .ax-qa-add-btn:hover {
-  background: #7dd3fc;
-  border-color: #7dd3fc;
-  color: #0f172a;
-  box-shadow: 0 6px 16px rgba(56, 189, 248, 0.4);
+  background: #e2e8f0;
+  border-color: #e2e8f0;
+  color: #000000;
+  box-shadow: 0 6px 16px rgba(255, 255, 255, 0.3);
 }
 
 .app.dark .ax-qa-add-btn.success {
@@ -5625,13 +5654,29 @@
   .ax-qa-overlay {
     padding: 0;
     align-items: flex-end;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
   }
 
   .ax-qa-modal {
     max-width: 100%;
+    width: 100%;
     border-radius: 20px 20px 0 0;
-    max-height: 88vh;
-    padding: 20px 18px 24px;
+    max-height: 82vh;
+    max-height: 82dvh;
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 18px 18px 0;
+    margin: 0;
     animation: axQaSlideUp 0.28s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
@@ -5644,13 +5689,39 @@
     }
   }
 
+  .ax-qa-header {
+    flex-shrink: 0;
+  }
+
+  .ax-qa-divider {
+    flex-shrink: 0;
+    margin: 14px 0 12px;
+  }
+
+  .ax-qa-selection-container {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    padding-bottom: 12px;
+    margin-bottom: 0;
+  }
+
+  .ax-qa-options-list {
+    max-height: none;
+    overflow-y: visible;
+  }
+
   .ax-qa-footer-actions {
-    position: sticky;
-    bottom: -24px;
-    margin: 16px -18px -24px;
-    padding: 12px 18px 16px;
+    position: relative;
+    flex-shrink: 0;
+    width: auto;
+    margin: 0 -18px 0;
+    padding: 12px 18px calc(14px + env(safe-area-inset-bottom, 0px));
     background: #ffffff;
-    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08);
+    border-top: 1px solid #e2e8f0;
     display: flex;
     gap: 8px;
     z-index: 20;
@@ -5658,7 +5729,8 @@
 
   .app.dark .ax-qa-footer-actions {
     background: #1e222b;
-    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.4);
+    border-top-color: #2e3644;
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.4);
   }
 
   .ax-qa-cancel-btn {
@@ -5669,6 +5741,7 @@
     width: 100%;
     height: 48px;
     font-size: 14.5px;
+    border-radius: 9999px;
   }
 
   .ax-qa-option-row {

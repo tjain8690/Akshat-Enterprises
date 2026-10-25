@@ -500,13 +500,13 @@ export function ProductsPage({
                       if (target.closest('button') || target.closest('a') || target.closest('input')) {
                         return;
                       }
-                      setDetailProduct(product);
+                      handleNavigate(`/product-description?id=${product.id}`);
                     }}
                     style={{ cursor: 'pointer' }}
                   >
                     <div
                       className="product-image"
-                      onClick={() => setDetailProduct(product)}
+                      onClick={() => handleNavigate(`/product-description?id=${product.id}`)}
                       style={{ cursor: 'pointer' }}
                     >
                       {product.tag && <span className="product-tag">{product.tag}</span>}
@@ -529,7 +529,7 @@ export function ProductsPage({
                     <div className="product-info">
                       <div>
                         <h3
-                          onClick={() => setDetailProduct(product)}
+                          onClick={() => handleNavigate(`/product-description?id=${product.id}`)}
                           style={{ cursor: 'pointer' }}
                         >
                           {product.name}
@@ -558,9 +558,12 @@ export function ProductsPage({
                       <button
                         type="button"
                         className="enquire-link"
-                        onClick={() => setDetailProduct(product)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDetailProduct(product);
+                        }}
                         style={{ background: 'rgba(0,0,0,0.04)', fontWeight: 700, cursor: 'pointer' }}
-                        title="View 4 Angle Photos"
+                        title="Quick View Popup Details"
                       >
                         <Eye size={13} /> View
                       </button>

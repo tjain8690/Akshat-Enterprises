@@ -223,8 +223,8 @@ export function ProductCard({
     }
   };
 
-  // View button action -> redirects directly to /product-description page
-  const handleViewDescription = (e?: React.MouseEvent) => {
+  // Open Product Description Page (when clicking anywhere on card)
+  const handleOpenProductDescription = (e?: React.MouseEvent) => {
     if (e) {
       e.stopPropagation();
       e.preventDefault();
@@ -238,19 +238,26 @@ export function ProductCard({
     }
   };
 
-  // Card / Image click action -> opens popup container showing clean images and details (Image 2)
-  const handleCardClick = (e: React.MouseEvent) => {
-    const target = e.target as HTMLElement;
-    // Don't trigger popup if user interacted with a button, link, slider control, or input
-    if (target.closest('button') || target.closest('a') || target.closest('input')) {
-      return;
-    }
+  // Open Popup Container (when clicking the Eye "View" button)
+  const handleOpenPopup = (e: React.MouseEvent) => {
     e.stopPropagation();
+    e.preventDefault();
     if (onOpenZoom) {
       onOpenZoom(product);
     } else if (onQuickView) {
       onQuickView(product);
     }
+  };
+
+  // Card / Image click action -> opens product description page
+  const handleCardClick = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    // Don't trigger if user interacted with a button, link, slider control, or input
+    if (target.closest('button') || target.closest('a') || target.closest('input')) {
+      return;
+    }
+    e.stopPropagation();
+    handleOpenProductDescription();
   };
 
   return (
@@ -288,13 +295,13 @@ export function ProductCard({
             />
           </button>
 
-          {/* 2. View Product Description Button (Redirects to /product-description) */}
+          {/* 2. View Button -> Opens popup detail container */}
           <button
             type="button"
             className="ax-card-action-btn view"
-            onClick={handleViewDescription}
-            aria-label="View Product Details"
-            title="View Product Description"
+            onClick={handleOpenPopup}
+            aria-label="Quick View Details"
+            title="Quick View Details"
           >
             <Eye size={17} />
           </button>
@@ -315,11 +322,11 @@ export function ProductCard({
           </a>
         </div>
 
-        {/* Product Image Slider: Clicking opens the clean Preview Popup */}
+        {/* Product Image Slider: Clicking opens product description page */}
         <div
           className="ax-card-img"
           onClick={handleCardClick}
-          title="Click to preview photos & angles"
+          title="Click to view product details"
         >
           <ProductImageSlider
             images={[product.image, ...(product.images ?? [])]}
@@ -333,12 +340,12 @@ export function ProductCard({
         {/* Category Subtitle */}
         <p className="ax-card-cat">{product.department} • {product.category}</p>
 
-        {/* Product Title: Click opens product details modal */}
+        {/* Product Title: Click opens product description page */}
         <h3
           className="ax-card-title"
           onClick={handleCardClick}
           style={{ cursor: 'pointer' }}
-          title="View product details"
+          title="Click to view product details"
         >
           {product.name}
         </h3>
