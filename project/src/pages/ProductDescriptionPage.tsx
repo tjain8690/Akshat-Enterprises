@@ -356,7 +356,7 @@ Please confirm availability and shipment details.`;
                     title="Select multiple sizes and quantities for wholesale carton order"
                   >
                     <Layers size={14} />
-                    <span>Wholesale Multi-Size Order</span>
+                    <span>Multi-Size Order</span>
                   </button>
                 )}
               </div>

@@ -230,10 +230,10 @@ export const QuickAddToCartModal: React.FC<QuickAddToCartModalProps> = ({
                       <button
                         type="button"
                         onClick={() => handleSizeQtyChange(s, 1)}
-                        className="ax-qa-step-btn"
+                        className="ax-qa-step-btn ax-qa-step-btn-plus"
                         aria-label={`Increase ${s}`}
                       >
-                        <Plus size={13} />
+                        <Plus size={14} />
                       </button>
                     </div>
 
@@ -242,9 +242,7 @@ export const QuickAddToCartModal: React.FC<QuickAddToCartModalProps> = ({
                         <span className="ax-qa-subtotal-tag">
                           ₹{rowSubtotal.toLocaleString('en-IN')}
                         </span>
-                      ) : (
-                        <span className="ax-qa-subtotal-empty">—</span>
-                      )}
+                      ) : null}
                     </div>
                   </div>
                 </div>
@@ -254,28 +252,28 @@ export const QuickAddToCartModal: React.FC<QuickAddToCartModalProps> = ({
 
           {/* Quick Carton Presets */}
           <div className="ax-qa-presets-wrap">
-            <span className="ax-qa-presets-label">Quick Presets:</span>
+            <span className="ax-qa-presets-label">Presets:</span>
             <div className="ax-qa-presets-group">
               <button
                 type="button"
                 className="ax-qa-preset-pill"
                 onClick={() => setPredefinedBox(6)}
               >
-                6 {unitLabelPlural} each
+                6 {unitLabelPlural}
               </button>
               <button
                 type="button"
                 className="ax-qa-preset-pill"
                 onClick={() => setPredefinedBox(10)}
               >
-                10 {unitLabelPlural} each
+                10 {unitLabelPlural}
               </button>
               <button
                 type="button"
                 className="ax-qa-preset-pill"
                 onClick={() => setPredefinedBox(12)}
               >
-                12 {unitLabelPlural} each
+                12 {unitLabelPlural}
               </button>
               <button
                 type="button"
