@@ -79,6 +79,14 @@ export const getProductUrl = (productId: string, productName?: string) => {
 };
 
 /**
+ * Returns full absolute URL to the shopping cart page
+ */
+export const getCartUrl = () => {
+  const base = getBaseSiteUrl();
+  return `${base}/cart`;
+};
+
+/**
  * Generates WhatsApp enquiry link including the direct product description link
  */
 export const getProductWhatsAppEnquiry = (

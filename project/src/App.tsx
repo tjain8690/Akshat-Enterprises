@@ -56,6 +56,7 @@ import {
   whatsappNumber,
   secondPhone,
   whatsappLink,
+  getCartUrl,
   DEPARTMENTS,
   DEPT_CATEGORIES,
   faqs,
@@ -1858,7 +1859,7 @@ export default function App() {
                     href={`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(
                       `*Hi Akshat Enterprises, I would like to place an order for ${totalCartCount} items worth ₹${cartTotalPrice.toLocaleString('en-IN')}:*\n\n` +
                       cart.map((it, i) => `${i + 1}. ${it.name} ${it.selectedSize ? `(Size: ${it.selectedSize})` : ''} × ${it.quantity}`).join('\n') +
-                      `\n\nPlease share availability and delivery details!`
+                      `\n\nCart Link:\n${getCartUrl()}\n\nPlease share availability and delivery details!`
                     )}`}
                     target="_blank"
                     rel="noreferrer"

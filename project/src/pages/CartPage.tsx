@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 
 import type { Product } from '../types';
+import { getCartUrl } from '../constants';
 
 export type CartItem = {
   name: string;
@@ -140,6 +141,7 @@ export const CartPage: React.FC<CartPageProps> = ({
   );
 
   const generateWhatsAppOrderLink = () => {
+    const cartUrl = getCartUrl();
     let message = `*Hi Akshat Enterprises, I would like to place an order:*\n\n`;
     groupedCart.forEach((group, idx) => {
       message += `${idx + 1}. *${group.name}* (${group.category})\n`;
@@ -151,6 +153,7 @@ export const CartPage: React.FC<CartPageProps> = ({
     message += `━━━━━━━━━━━━━━━━━━━━━\n`;
     message += `*Total Amount:* ${formatPrice(subtotal)} (${totalPairsCount} pairs across ${groupedCart.length} products)\n`;
     message += `*Shipping:* Free Store Dispatch (Navi Mumbai)\n\n`;
+    message += `Cart Link:\n${cartUrl}\n\n`;
     message += `Please confirm stock availability and share dispatch schedule. Thank you!`;
     return `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
   };
