@@ -1,8 +1,8 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 export function getSupabaseConfig(): { url: string; key: string } {
-  const envUrl = import.meta.env.VITE_SUPABASE_URL ?? '';
-  const envKey = import.meta.env.VITE_SUPABASE_ANON_KEY ?? '';
+  const envUrl = import.meta.env.SUPABASE_URL ?? import.meta.env.VITE_SUPABASE_URL ?? '';
+  const envKey = import.meta.env.SUPABASE_ANON_KEY ?? import.meta.env.VITE_SUPABASE_ANON_KEY ?? '';
 
   if (envUrl && envKey && envUrl !== 'https://your-project-id.supabase.co' && !envUrl.includes('your-project-id')) {
     return { url: envUrl, key: envKey };

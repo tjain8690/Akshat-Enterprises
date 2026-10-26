@@ -15,7 +15,7 @@ import {
   Check,
 } from 'lucide-react';
 import type { Product, CartItem } from '../types';
-import { whatsappLink, shareToWhatsAppLink } from '../constants';
+import { whatsappLink, shareToWhatsAppLink, getProductWhatsAppEnquiry } from '../constants';
 
 interface WishlistPageProps {
   wishlist: string[];
@@ -319,9 +319,7 @@ export function WishlistPage({
                       </button>
 
                       <a
-                        href={whatsappLink(
-                          `Hi Akshat Enterprises, I have saved ${product.name} (${product.price}, Size: ${currentSize}) in my wishlist. Please share order details.`
-                        )}
+                        href={getProductWhatsAppEnquiry(product, currentSize)}
                         target="_blank"
                         rel="noreferrer"
                         className="ax-wishlist-wa-btn"

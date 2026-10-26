@@ -12,7 +12,7 @@ import {
   Check,
 } from 'lucide-react';
 import type { Product, CartItem } from '../types';
-import { COLOR_HEX, whatsappLink } from '../constants';
+import { COLOR_HEX, whatsappLink, getProductWhatsAppEnquiry } from '../constants';
 import { useNavigate } from 'react-router-dom';
 
 export function ProductImageSlider({ images, name }: { images: string[]; name: string }) {
@@ -308,9 +308,7 @@ export function ProductCard({
 
           {/* 3. WhatsApp Enquiry Button */}
           <a
-            href={whatsappLink(
-              `Hi Akshat Enterprises, I want to enquire about ${product.name} (${product.price}, Size: ${cardSize}). Please share stock & delivery details.`
-            )}
+            href={getProductWhatsAppEnquiry(product, cardSize)}
             target="_blank"
             rel="noreferrer"
             className="ax-card-action-btn whatsapp"

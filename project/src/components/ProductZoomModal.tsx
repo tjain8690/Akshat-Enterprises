@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import type { Product } from '../types';
 import { getProductAngles } from './ProductDetailModal';
-import { whatsappLink } from '../constants';
+import { whatsappLink, getProductWhatsAppEnquiry } from '../constants';
 
 interface ProductZoomModalProps {
   product: Product;
@@ -194,9 +194,7 @@ export function ProductZoomModal({
             )}
 
             <a
-              href={whatsappLink(
-                `Hi Akshat Enterprises, I am enquiring about ${product.name} (${product.price}). Please share availability.`
-              )}
+              href={getProductWhatsAppEnquiry(product)}
               target="_blank"
               rel="noreferrer"
               className="ax-zoom-whatsapp-btn"

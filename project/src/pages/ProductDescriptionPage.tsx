@@ -21,7 +21,7 @@ import {
   Info,
 } from 'lucide-react';
 import type { Product, CartItem } from '../types';
-import { whatsappLink, whatsappNumber } from '../constants';
+import { whatsappLink, whatsappNumber, getProductUrl } from '../constants';
 import { getProductAngles } from '../components/ProductDetailModal';
 import { ProductCard } from '../components/ProductCard';
 
@@ -112,12 +112,18 @@ export function ProductDescriptionPage({
 
   const handleBuyNow = () => {
     onAddToCart(product, selectedSize, quantity);
+    const productUrl = getProductUrl(product.id);
     const msg = `Hi Akshat Enterprises, I want to purchase this item:
-*Product:* ${product.name}
-*Price:* ${product.price}
-*Size:* ${selectedSize}
-*Color:* ${selectedColor}
-*Quantity:* ${quantity}
+
+*${product.name}*
+Price: ${product.price}
+Size: ${selectedSize}
+Color: ${selectedColor}
+Quantity: ${quantity}
+
+Product Link:
+${productUrl}
+
 Please confirm availability and shipment details.`;
     window.open(whatsappLink(msg), '_blank');
   };
@@ -435,7 +441,14 @@ Please confirm availability and shipment details.`;
             <div className="ax-pdp-direct-actions">
               <a
                 href={whatsappLink(
-                  `Hi Akshat Enterprises, I want to order ${product.name} (${product.price}, Color: ${selectedColor}, Qty: ${quantity}). Please share delivery & wholesale details.`
+                  `Hi Akshat Enterprises, I want to order:
+
+*${product.name}* (${product.price}, Color: ${selectedColor}, Qty: ${quantity}, Size: ${selectedSize})
+
+Product Link:
+${getProductUrl(product.id)}
+
+Please share delivery & wholesale details.`
                 )}
                 target="_blank"
                 rel="noreferrer"

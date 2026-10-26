@@ -49,6 +49,7 @@ import {
   loadVibeCards,
   SEED_CATEGORY_CARDS,
   SEED_VIBE_CARDS,
+  SEED_PRODUCTS,
 } from './productStore';
 import type { Banner, CategoryCard, VibeCard } from './types';
 import {
@@ -242,8 +243,17 @@ export default function App() {
   // Toast notification
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
-  // Products state
-  const [products, setProducts] = useState<Product[]>([]);
+  // Products state (seeded initially so direct links from WhatsApp render instantly)
+  const [products, setProducts] = useState<Product[]>(() => {
+    try {
+      const saved = localStorage.getItem('akshat_products_v3');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return SEED_PRODUCTS;
+  });
   const [productsLoading, setProductsLoading] = useState(true);
 
   // Cart state persisted in localStorage
@@ -738,18 +748,19 @@ export default function App() {
     currentPath.startsWith('/product-description') ||
     (currentPath.startsWith('/product') && currentPath !== '/products' && !currentPath.startsWith('/products/'));
 
-  const detailProductId = useMemo(() => {
+  const detailProductQuery = useMemo(() => {
     if (!isProductDetailPage) return null;
     try {
       const search = window.location.search;
       if (search) {
         const sp = new URLSearchParams(search);
         const qId = sp.get('id');
-        if (qId) return qId;
+        const qName = sp.get('name');
+        return { id: qId, name: qName };
       }
       const parts = currentPath.split('/');
       if (parts.length >= 3 && parts[2]) {
-        return decodeURIComponent(parts[2]);
+        return { id: decodeURIComponent(parts[2]), name: null };
       }
     } catch {}
     return null;
@@ -757,12 +768,44 @@ export default function App() {
 
   const currentDetailProduct = useMemo(() => {
     if (!isProductDetailPage) return null;
-    if (detailProductId) {
-      const found = products.find((p) => p.id === detailProductId);
-      if (found) return found;
+    if (detailProductQuery) {
+      const { id, name } = detailProductQuery;
+
+      // 1. Direct ID match (checks UUID or seed-id)
+      if (id) {
+        const found = products.find((p) => p.id === id);
+        if (found) return found;
+
+        // 2. If ID is a seed ID (e.g. 'seed-1'), match by corresponding seed name in products
+        const seedMatch = SEED_PRODUCTS.find((s) => s.id === id);
+        if (seedMatch) {
+          const bySeedName = products.find(
+            (p) => p.name.toLowerCase().trim() === seedMatch.name.toLowerCase().trim()
+          );
+          if (bySeedName) return bySeedName;
+        }
+
+        // 3. If ID is a name slug or partial name
+        const cleanId = decodeURIComponent(id).toLowerCase().trim();
+        const bySlug = products.find(
+          (p) =>
+            p.name.toLowerCase().trim() === cleanId ||
+            p.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') === cleanId
+        );
+        if (bySlug) return bySlug;
+      }
+
+      // 4. Fallback match by product name parameter if ID is from a different environment
+      if (name) {
+        const cleanName = decodeURIComponent(name).toLowerCase().trim();
+        const byName = products.find(
+          (p) => p.name.toLowerCase().trim() === cleanName
+        );
+        if (byName) return byName;
+      }
     }
     return products[0] || null;
-  }, [isProductDetailPage, detailProductId, products]);
+  }, [isProductDetailPage, detailProductQuery, products]);
 
   // Quick View opener
   const handleOpenQuickView = (product: Product) => {
@@ -1170,21 +1213,36 @@ export default function App() {
             onNavigateHome={() => navigateTo('/')}
             navigateTo={navigateTo}
           />
-        ) : isProductDetailPage && currentDetailProduct ? (
-          <ProductDescriptionPage
-            product={currentDetailProduct}
-            allProducts={products}
-            cart={cart}
-            wishlist={wishlist}
-            onAddToCart={handleAddToCart}
-            onToggleWishlist={handleToggleWishlist}
-            onUpdateQuantity={handleUpdateQuantity}
-            onNavigateHome={() => navigateTo('/')}
-            navigateTo={navigateTo}
-            onOpenZoomModal={(prod) => setZoomModalProduct(prod)}
-            onOpenQuickAdd={(prod) => setQuickAddProduct(prod)}
-            dark={dark}
-          />
+        ) : isProductDetailPage ? (
+          currentDetailProduct ? (
+            <ProductDescriptionPage
+              product={currentDetailProduct}
+              allProducts={products}
+              cart={cart}
+              wishlist={wishlist}
+              onAddToCart={handleAddToCart}
+              onToggleWishlist={handleToggleWishlist}
+              onUpdateQuantity={handleUpdateQuantity}
+              onNavigateHome={() => navigateTo('/')}
+              navigateTo={navigateTo}
+              onOpenZoomModal={(prod) => setZoomModalProduct(prod)}
+              onOpenQuickAdd={(prod) => setQuickAddProduct(prod)}
+              dark={dark}
+            />
+          ) : productsLoading ? (
+            <div style={{ minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '14px' }}>
+              <div style={{ width: 34, height: 34, border: '3px solid #e2e8f0', borderTopColor: '#0284c7', borderRadius: '50%', animation: 'axQaSpin 0.75s linear infinite' }} />
+              <p style={{ color: '#64748b', fontSize: '14px', fontWeight: 600 }}>Loading product details...</p>
+            </div>
+          ) : (
+            <div style={{ minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px', textAlign: 'center', padding: '24px' }}>
+              <h2 style={{ fontSize: '20px', fontWeight: 700, color: '#0f172a' }}>Product Not Found</h2>
+              <p style={{ color: '#64748b', fontSize: '14px', maxWidth: '380px' }}>The item you are looking for may have been updated or removed from our catalog.</p>
+              <button className="button button-dark" onClick={() => navigateTo('/')} style={{ padding: '10px 24px', borderRadius: '9999px', background: '#0f172a', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 600 }}>
+                Explore All Footwear
+              </button>
+            </div>
+          )
         ) : (
           <>
             {/* ── HERO BANNER SLIDER (Auto-slides Every 2s · Never pauses on click) ── */}

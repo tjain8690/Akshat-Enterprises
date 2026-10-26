@@ -16,7 +16,7 @@ import {
   X,
 } from 'lucide-react';
 import type { Product, CartItem } from '../types';
-import { COLOR_HEX, whatsappLink } from '../constants';
+import { COLOR_HEX, whatsappLink, getProductWhatsAppEnquiry } from '../constants';
 import { ProductImageSlider } from '../components/ProductCard';
 import { ProductDetailModal } from '../components/ProductDetailModal';
 
@@ -596,9 +596,7 @@ export function ProductsPage({
                       )}
                       <a
                         className="enquire-link"
-                        href={whatsappLink(
-                          `Hi Akshat Enterprises, I want to enquire about ${product.name}. Please share available sizes.`
-                        )}
+                        href={getProductWhatsAppEnquiry(product)}
                         target="_blank"
                         rel="noreferrer"
                       >

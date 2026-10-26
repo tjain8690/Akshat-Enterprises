@@ -13,7 +13,7 @@ import {
   Zap,
 } from 'lucide-react';
 import type { Product } from '../types';
-import { whatsappLink } from '../constants';
+import { whatsappLink, getProductUrl } from '../constants';
 
 interface ProductDetailModalProps {
   product: Product;
@@ -117,13 +117,19 @@ export function ProductDetailModal({
 
   const handleBuyNow = () => {
     onAddToCart(product, selectedSize, quantity);
-    // Instant direct WhatsApp order confirmation
+    // Instant direct WhatsApp order confirmation with direct product link
+    const productUrl = getProductUrl(product.id);
     const message = `Hi Akshat Enterprises, I would like to buy:
-Product: ${product.name}
+
+*${product.name}*
 Price: ${product.price}
 Quantity: ${quantity}
 Size: ${selectedSize} (${sizeUnit})
 Color: ${selectedColor}
+
+Product Link:
+${productUrl}
+
 Please confirm availability and dispatch!`;
     window.open(whatsappLink(message), '_blank');
     onClose();
