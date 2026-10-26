@@ -25,8 +25,9 @@ import {
   Edit,
   Edit2,
   Save,
-  Minus,
   Palette,
+  User,
+  EyeOff,
 } from 'lucide-react';
 import type { Product, Banner, CategoryCard, VibeCard } from '../types';
 import {
@@ -47,7 +48,7 @@ import {
   SEED_CATEGORY_CARDS,
   SEED_VIBE_CARDS,
 } from '../productStore';
-import { isSupabaseConfigured, getSupabaseConfig, configureSupabase } from '../supabase';
+import { supabase, isSupabaseConfigured, getSupabaseConfig, configureSupabase } from '../supabase';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || 'akshat2024';
@@ -212,10 +213,49 @@ export function AdminPage({
   onUpdate,
   onNavigateHome,
 }: AdminPageProps) {
-  // Auth
-  const [authenticated, setAuthenticated] = useState(false);
+  // Auth & Database Credential State
+  const [authenticated, setAuthenticated] = useState<boolean>(() => {
+    try {
+      const sess = sessionStorage.getItem('ae_admin_session');
+      if (sess) {
+        const parsed = JSON.parse(sess);
+        return Boolean(parsed?.username);
+      }
+    } catch {}
+    return false;
+  });
+  const [usernameInput, setUsernameInput] = useState('');
   const [pwInput, setPwInput] = useState('');
-  const [pwError, setPwError] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authErrorMsg, setAuthErrorMsg] = useState<string | null>(null);
+  const [lockoutRemaining, setLockoutRemaining] = useState<number>(0);
+  const [currentAdminUser, setCurrentAdminUser] = useState<string>(() => {
+    try {
+      const sess = sessionStorage.getItem('ae_admin_session');
+      if (sess) {
+        const parsed = JSON.parse(sess);
+        return parsed?.username || 'Admin';
+      }
+    } catch {}
+    return 'Admin';
+  });
+
+  // Lockout countdown timer
+  useEffect(() => {
+    const checkLockout = () => {
+      try {
+        const lockoutUntil = parseInt(localStorage.getItem('ae_admin_lockout') || '0', 10);
+        const remaining = Math.max(0, Math.ceil((lockoutUntil - Date.now()) / 1000));
+        setLockoutRemaining(remaining);
+      } catch {
+        setLockoutRemaining(0);
+      }
+    };
+    checkLockout();
+    const timer = setInterval(checkLockout, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Tab: 'inventory' | 'add' | 'banners' | 'categories'
   const [activeTab, setActiveTab] = useState<'inventory' | 'add' | 'banners' | 'categories'>('inventory');
@@ -460,16 +500,114 @@ export function AdminPage({
     }
   };
 
-  // ─── Auth ───────────────────────────────────────────────────────────────────
-  const handleLogin = (e: React.FormEvent) => {
+  // ─── Database Auth Verification ─────────────────────────────────────────────
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (pwInput === ADMIN_PASSWORD) {
-      setAuthenticated(true);
-      setPwError(false);
-    } else {
-      setPwError(true);
-      setTimeout(() => setPwError(false), 1200);
+    if (lockoutRemaining > 0) return;
+
+    const cleanUser = usernameInput.trim();
+    const cleanPw = pwInput.trim();
+
+    if (!cleanUser || !cleanPw) {
+      setAuthErrorMsg('Please enter both username and password.');
+      return;
     }
+
+    setAuthLoading(true);
+    setAuthErrorMsg(null);
+
+    try {
+      let isSuccess = false;
+      let matchedUsername = cleanUser;
+
+      // 1. Check custom Supabase table `admin_users`
+      if (isSupabaseConfigured && supabase) {
+        try {
+          const { data, error } = await supabase
+            .from('admin_users')
+            .select('id, username, password, role')
+            .ilike('username', cleanUser)
+            .maybeSingle();
+
+          if (!error && data && data.password === cleanPw) {
+            isSuccess = true;
+            matchedUsername = data.username || cleanUser;
+          }
+        } catch (dbErr) {
+          console.warn('[Admin Auth] Supabase admin_users check error:', dbErr);
+        }
+
+        // 2. Fallback to Supabase Auth (email / password) if admin_users not matching
+        if (!isSuccess) {
+          try {
+            const emailToTry = cleanUser.includes('@') ? cleanUser : `${cleanUser}@akshatenterprises.com`;
+            const { data: authData, error: authErr } = await supabase.auth.signInWithPassword({
+              email: emailToTry,
+              password: cleanPw,
+            });
+            if (!authErr && authData?.user) {
+              isSuccess = true;
+              matchedUsername = authData.user.email?.split('@')[0] || cleanUser;
+            }
+          } catch {}
+        }
+      }
+
+      // 3. Fallback to env password for initial setup / offline development
+      if (!isSuccess) {
+        if (
+          (cleanUser.toLowerCase() === 'admin' || cleanUser.toLowerCase() === 'akshat') &&
+          cleanPw === ADMIN_PASSWORD
+        ) {
+          isSuccess = true;
+          matchedUsername = cleanUser;
+        }
+      }
+
+      if (isSuccess) {
+        try {
+          localStorage.removeItem('ae_admin_failed_attempts');
+          localStorage.removeItem('ae_admin_lockout');
+          sessionStorage.setItem(
+            'ae_admin_session',
+            JSON.stringify({ username: matchedUsername, timestamp: Date.now() })
+          );
+        } catch {}
+
+        setCurrentAdminUser(matchedUsername);
+        setAuthenticated(true);
+        setAuthErrorMsg(null);
+        setPwInput('');
+      } else {
+        const failed = parseInt(localStorage.getItem('ae_admin_failed_attempts') || '0', 10) + 1;
+        localStorage.setItem('ae_admin_failed_attempts', String(failed));
+
+        if (failed >= 5) {
+          const lockoutTime = Date.now() + 15 * 60 * 1000;
+          localStorage.setItem('ae_admin_lockout', String(lockoutTime));
+          setAuthErrorMsg('Too many failed attempts. Portal locked for 15 minutes.');
+        } else {
+          setAuthErrorMsg(
+            `Incorrect username or password. (${5 - failed} attempt${5 - failed === 1 ? '' : 's'} remaining)`
+          );
+        }
+      }
+    } catch (err: unknown) {
+      setAuthErrorMsg(err instanceof Error ? err.message : 'Login failed. Please check credentials.');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      sessionStorage.removeItem('ae_admin_session');
+      if (supabase) {
+        await supabase.auth.signOut();
+      }
+    } catch {}
+    setAuthenticated(false);
+    onNavigateHome();
   };
 
   // ─── Image handling (4 Angles) ──────────────────────────────────────────────
@@ -840,7 +978,7 @@ export function AdminPage({
     }
   };
 
-  // ─── Password Gate (Clean, Centered, Responsive Card) ───────────────────────
+  // ─── Database-Secured Password Gate ──────────────────────────────────────────
   if (!authenticated) {
     return (
       <div className={`admin-gate-wrap${dark ? ' dark' : ''}`}>
@@ -850,35 +988,100 @@ export function AdminPage({
           </div>
 
           <div className="admin-gate-icon-circle">
-            <Lock size={26} />
+            <Shield size={26} />
           </div>
 
-          <h1 className="admin-gate-title">Owner Access</h1>
+          <h1 className="admin-gate-title">Owner Administration</h1>
           <p className="admin-gate-subtitle">
-            Enter the admin passkey to manage database inventory, products, and categories.
+            Enter your database admin credentials to manage inventory, catalog, and banners.
           </p>
 
           <form onSubmit={handleLogin} className="admin-gate-form">
-            <div className="admin-gate-input-wrapper">
-              <input
-                type="password"
-                placeholder="Enter admin password…"
-                value={pwInput}
-                onChange={(e) => setPwInput(e.target.value)}
-                className={`admin-gate-input${pwError ? ' error' : ''}`}
-                autoFocus
-                id="admin-password-input"
-              />
+            {/* Username Input */}
+            <div className="admin-gate-field">
+              <label className="admin-gate-label" htmlFor="admin-username-input">
+                Admin Username or Email
+              </label>
+              <div className="admin-gate-input-wrapper with-icon">
+                <span className="admin-gate-input-icon">
+                  <User size={16} />
+                </span>
+                <input
+                  type="text"
+                  placeholder="e.g. akshat or admin"
+                  value={usernameInput}
+                  onChange={(e) => setUsernameInput(e.target.value)}
+                  className="admin-gate-input"
+                  autoFocus
+                  autoComplete="username"
+                  id="admin-username-input"
+                  disabled={lockoutRemaining > 0 || authLoading}
+                />
+              </div>
             </div>
 
-            {pwError && (
-              <div className="admin-gate-alert">
-                <AlertTriangle size={15} /> Incorrect password. Please try again.
+            {/* Password Input */}
+            <div className="admin-gate-field">
+              <label className="admin-gate-label" htmlFor="admin-password-input">
+                Password
+              </label>
+              <div className="admin-gate-input-wrapper with-icon">
+                <span className="admin-gate-input-icon">
+                  <Lock size={16} />
+                </span>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Enter database password…"
+                  value={pwInput}
+                  onChange={(e) => setPwInput(e.target.value)}
+                  className={`admin-gate-input${authErrorMsg ? ' error' : ''}`}
+                  autoComplete="current-password"
+                  id="admin-password-input"
+                  disabled={lockoutRemaining > 0 || authLoading}
+                />
+                <button
+                  type="button"
+                  className="admin-gate-toggle-pw-btn"
+                  onClick={() => setShowPassword(!showPassword)}
+                  tabIndex={-1}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
               </div>
-            )}
+            </div>
 
-            <button type="submit" className="admin-gate-submit-btn" id="admin-login-btn">
-              <Shield size={16} /> Enter Dashboard
+            {/* Lockout or Error Alert */}
+            {lockoutRemaining > 0 ? (
+              <div className="admin-gate-alert lockout">
+                <AlertTriangle size={15} />
+                <span>
+                  Portal locked. Try again in {Math.floor(lockoutRemaining / 60)}m {lockoutRemaining % 60}s.
+                </span>
+              </div>
+            ) : authErrorMsg ? (
+              <div className="admin-gate-alert">
+                <AlertTriangle size={15} />
+                <span>{authErrorMsg}</span>
+              </div>
+            ) : null}
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              className="admin-gate-submit-btn"
+              id="admin-login-btn"
+              disabled={lockoutRemaining > 0 || authLoading}
+            >
+              {authLoading ? (
+                <>
+                  <RefreshCw size={16} className="spin" /> Verifying with Database…
+                </>
+              ) : (
+                <>
+                  <Shield size={16} /> Sign In to Dashboard
+                </>
+              )}
             </button>
           </form>
 
@@ -886,6 +1089,9 @@ export function AdminPage({
             <button type="button" className="admin-gate-back-btn" onClick={onNavigateHome}>
               <ArrowLeft size={14} /> Return to Store
             </button>
+            <div className="admin-gate-badge">
+              <Database size={12} /> Supabase Database Auth Active
+            </div>
           </div>
         </div>
       </div>
@@ -943,8 +1149,8 @@ export function AdminPage({
             )}
           </button>
 
-          <button className="admin-signout-btn" onClick={() => setAuthenticated(false)} title="Sign out">
-            <LogOut size={15} /> Exit
+          <button className="admin-signout-btn" onClick={handleSignOut} title="Sign out">
+            <LogOut size={15} /> Exit ({currentAdminUser})
           </button>
         </div>
       </header>

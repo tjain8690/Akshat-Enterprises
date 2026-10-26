@@ -3217,10 +3217,65 @@ h2 { font-size: clamp(43px, 5vw, 71px); margin: 18px 0 0; }.heading-note { max-w
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
+}
+.admin-gate-field {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+}
+.admin-gate-label {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #374151;
+  letter-spacing: 0.02em;
+}
+.admin-gate-wrap.dark .admin-gate-label {
+  color: #cbd5e1;
 }
 .admin-gate-input-wrapper {
   width: 100%;
+  position: relative;
+}
+.admin-gate-input-wrapper.with-icon {
+  display: flex;
+  align-items: center;
+}
+.admin-gate-input-icon {
+  position: absolute;
+  left: 14px;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+  z-index: 1;
+}
+.admin-gate-input-wrapper.with-icon .admin-gate-input {
+  padding-left: 42px;
+  padding-right: 42px;
+}
+.admin-gate-toggle-pw-btn {
+  position: absolute;
+  right: 12px;
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: color 0.15s;
+  z-index: 1;
+}
+.admin-gate-toggle-pw-btn:hover {
+  color: #111111;
+}
+.admin-gate-wrap.dark .admin-gate-toggle-pw-btn:hover {
+  color: #ffffff;
 }
 .admin-gate-input {
   width: 100%;
@@ -3228,7 +3283,7 @@ h2 { font-size: clamp(43px, 5vw, 71px); margin: 18px 0 0; }.heading-note { max-w
   border: 1px solid rgba(0, 0, 0, 0.15);
   border-radius: 10px;
   padding: 0 16px;
-  font-size: 15px;
+  font-size: 14.5px;
   outline: none;
   background: #ffffff;
   color: #111111;
@@ -3257,13 +3312,36 @@ h2 { font-size: clamp(43px, 5vw, 71px); margin: 18px 0 0; }.heading-note { max-w
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 8px;
   font-size: 13px;
   font-weight: 600;
   color: #dc2626;
   background: rgba(220, 38, 38, 0.08);
   border-radius: 8px;
-  padding: 8px 12px;
+  padding: 10px 14px;
+  line-height: 1.4;
+  text-align: left;
+}
+.admin-gate-alert.lockout {
+  background: rgba(239, 68, 68, 0.12);
+  color: #b91c1c;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+.admin-gate-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #059669;
+  background: rgba(16, 185, 129, 0.1);
+  padding: 4px 10px;
+  border-radius: 999px;
+  letter-spacing: 0.02em;
+}
+.admin-gate-wrap.dark .admin-gate-badge {
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.18);
 }
 
 .admin-gate-submit-btn {

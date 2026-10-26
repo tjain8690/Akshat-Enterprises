@@ -88,9 +88,17 @@ export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
 
-  // Secret Owner Authorization State (Blocks direct /admin access from URL)
+const customAdminPath = (import.meta as any).env?.VITE_ADMIN_PATH || '/portal-ae';
+const isAdminPath = (path: string): boolean => {
+  // Common guessable paths are strictly blocked
+  if (path === '/admin' || path === '/admin-login') return false;
+  if (customAdminPath && path === customAdminPath) return true;
+  return path === '/portal-ae' || path === '/bharat';
+};
+
+  // Dedicated Owner Admin Authorization State
   const [isOwnerUnlocked, setIsOwnerUnlocked] = useState<boolean>(() => {
-    if (typeof window !== 'undefined' && window.location.pathname === '/bharat') {
+    if (typeof window !== 'undefined' && isAdminPath(window.location.pathname)) {
       return true;
     }
     try {
@@ -102,34 +110,35 @@ export default function App() {
 
   const [currentPath, setCurrentPath] = useState<string>(() => {
     const p = window.location.pathname;
-    if (p === '/bharat') {
+    // Strict block: Anyone attempting /admin or /admin-login is silently redirected to home
+    if (p === '/admin' || p === '/admin-login') {
+      window.history.replaceState(null, '', '/');
+      return '/';
+    }
+    if (isAdminPath(p)) {
       try {
         sessionStorage.setItem('ae_owner_unlocked', 'true');
       } catch {}
-      return '/bharat';
-    }
-    if (p === '/admin') {
-      window.history.replaceState(null, '', '/');
-      return '/';
+      return p;
     }
     return p;
   });
 
-  // Watch for URL navigation changes: /bharat unlocks admin, /admin redirects to /
+  // Watch for URL navigation changes: block /admin, only allow secret admin path (/portal-ae, /bharat, or custom VITE_ADMIN_PATH)
   useEffect(() => {
     const handlePopState = () => {
       const p = window.location.pathname;
-      if (p === '/bharat') {
+      if (p === '/admin' || p === '/admin-login') {
+        window.history.replaceState(null, '', '/');
+        setCurrentPath('/');
+        return;
+      }
+      if (isAdminPath(p)) {
         try {
           sessionStorage.setItem('ae_owner_unlocked', 'true');
         } catch {}
         setIsOwnerUnlocked(true);
-        setCurrentPath('/bharat');
-        return;
-      }
-      if (p === '/admin') {
-        window.history.replaceState(null, '', '/');
-        setCurrentPath('/');
+        setCurrentPath(p);
         return;
       }
       setCurrentPath(p);
@@ -168,14 +177,14 @@ export default function App() {
   // Category sidebar popup drawer (slides left to right)
   const [categorySidebarOpen, setCategorySidebarOpen] = useState(false);
 
-  // Secret Admin Opener (Routes to /bharat)
-  const openOwnerAdmin = () => {
+  // Dedicated Admin Opener (Routes to /admin-login)
+  const openOwnerAdmin = (path = '/admin-login') => {
     try {
       sessionStorage.setItem('ae_owner_unlocked', 'true');
     } catch {}
     setIsOwnerUnlocked(true);
-    window.history.pushState(null, '', '/bharat');
-    setCurrentPath('/bharat');
+    window.history.pushState(null, '', path);
+    setCurrentPath(path);
     window.scrollTo({ top: 0, behavior: 'smooth' });
     setCartDrawerOpen(false);
     setMenuOpen(false);
@@ -379,15 +388,16 @@ export default function App() {
   }, [searchOpen]);
 
   const navigateTo = (path: string) => {
-    if (path === '/bharat') {
+    if (path === '/admin' || path === '/admin-login') {
+      window.history.replaceState(null, '', '/');
+      setCurrentPath('/');
+      return;
+    }
+    if (isAdminPath(path)) {
       try {
         sessionStorage.setItem('ae_owner_unlocked', 'true');
       } catch {}
       setIsOwnerUnlocked(true);
-    } else if (path === '/admin') {
-      window.history.replaceState(null, '', '/');
-      setCurrentPath('/');
-      return;
     }
     window.history.pushState(null, '', path);
     setCurrentPath(path);
@@ -846,6 +856,28 @@ export default function App() {
     };
   }, [categorySidebarOpen, cartDrawerOpen, quickViewProduct]);
 
+  // Standalone Isolated Admin Portal View (Accessible ONLY via separate direct link, not from main site)
+  if (isAdminPath(currentPath)) {
+    return (
+      <div className={`app ax-app ax-admin-standalone-wrapper${dark ? ' dark' : ''}`}>
+        <AdminPage
+          products={products}
+          banners={banners}
+          categoryCards={categoryCards}
+          vibeCards={vibeCards}
+          onBannersChange={refreshBanners}
+          onCategoryCardsChange={refreshCategoryCards}
+          onVibeCardsChange={refreshVibeCards}
+          dark={dark}
+          onPublish={handlePublishProduct}
+          onDelete={handleDeleteProduct}
+          onUpdate={handleUpdateProduct}
+          onNavigateHome={closeOwnerAdmin}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className={`app ax-app${dark ? ' dark' : ''}${categorySidebarOpen ? ' porto-sidebar-active' : ''}`}>
       {/* ── Toast Notification ── */}
@@ -1187,21 +1219,6 @@ export default function App() {
             onNavigateHome={() => navigateTo('/')}
             onQuickView={handleOpenQuickView}
             dark={dark}
-          />
-        ) : currentPath === '/bharat' ? (
-          <AdminPage
-            products={products}
-            banners={banners}
-            categoryCards={categoryCards}
-            vibeCards={vibeCards}
-            onBannersChange={refreshBanners}
-            onCategoryCardsChange={refreshCategoryCards}
-            onVibeCardsChange={refreshVibeCards}
-            dark={dark}
-            onPublish={handlePublishProduct}
-            onDelete={handleDeleteProduct}
-            onUpdate={handleUpdateProduct}
-            onNavigateHome={closeOwnerAdmin}
           />
         ) : currentPath === '/products' ? (
           <ProductsPage
