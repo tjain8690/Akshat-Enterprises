@@ -25,6 +25,7 @@ import {
   Edit,
   Edit2,
   Save,
+  Minus,
   Palette,
   User,
   EyeOff,
