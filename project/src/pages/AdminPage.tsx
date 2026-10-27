@@ -906,6 +906,9 @@ export function AdminPage({
     setBannerImagePreview(b.image);
     setBannerSuccessMsg(null);
     setBannerErrorMsg(null);
+    setTimeout(() => {
+      document.getElementById('admin-banner-editor-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 60);
   };
 
   const handleResetBannerForm = () => {
@@ -918,6 +921,9 @@ export function AdminPage({
     setBannerImagePreview('');
     setBannerSuccessMsg(null);
     setBannerErrorMsg(null);
+    setTimeout(() => {
+      document.getElementById('admin-banner-editor-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 60);
   };
 
   const handleBannerFile = (file: File) => {
@@ -2195,89 +2201,52 @@ export function AdminPage({
               {/* Promo Banner: "The Season of Raw" */}
               {(() => {
                 const promoBannerItem = dbBanners.find((b) => b.type === 'promo') || SEED_PROMO_BANNER;
+                const isPromoEditing = editingBannerId === promoBannerItem.id;
                 return (
-                  <div
-                    className="admin-card"
-                    style={{
-                      marginBottom: 16,
-                      border: editingBannerId === promoBannerItem.id ? '2px solid #f04c32' : '1px solid #f59e0b',
-                      background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.06) 0%, rgba(240, 76, 50, 0.04) 100%)',
-                    }}
-                  >
-                    <div className="admin-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
-                          <span
-                            style={{
-                              background: '#f59e0b',
-                              color: '#fff',
-                              fontSize: 10,
-                              fontWeight: 800,
-                              padding: '2px 8px',
-                              borderRadius: 4,
-                              letterSpacing: '0.04em',
-                            }}
-                          >
-                            PROMO BANNER
-                          </span>
-                          <span style={{ fontSize: 13, fontWeight: 800, color: '#f04c32' }}>
-                            THE SEASON OF RAW
-                          </span>
+                  <div className={`admin-promo-showcase-card${isPromoEditing ? ' editing' : ''}`}>
+                    <div className="admin-promo-card-head">
+                      <div className="admin-promo-head-left">
+                        <div className="admin-promo-badge-row">
+                          <span className="admin-promo-badge">PROMO BANNER</span>
+                          <span className="admin-promo-title-tag">THE SEASON OF RAW</span>
                         </div>
-                        <p className="admin-card-subtitle" style={{ margin: 0 }}>
-                          Section banner in database table <code>banners</code>.
+                        <p className="admin-promo-subtitle">
+                          Homepage section banner stored in Supabase table <code>banners</code>.
                         </p>
                       </div>
 
                       <button
                         type="button"
-                        className="admin-filter-pill active"
+                        className="admin-promo-edit-btn"
                         onClick={() => handleSelectEditBanner(promoBannerItem)}
-                        style={{
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 6,
-                          background: '#f04c32',
-                          borderColor: '#f04c32',
-                          color: '#fff',
-                        }}
                       >
-                        <Edit size={13} /> Edit Promo Banner
+                        <Edit size={13} /> {isPromoEditing ? 'Editing Promo…' : 'Edit Promo Banner'}
                       </button>
                     </div>
 
-                    <div style={{ padding: '14px 18px', display: 'flex', gap: 16, alignItems: 'center' }}>
-                      <div
-                        style={{
-                          width: 110,
-                          height: 70,
-                          borderRadius: 8,
-                          overflow: 'hidden',
-                          background: '#000',
-                          flexShrink: 0,
-                        }}
-                      >
+                    <div className="admin-promo-card-body">
+                      <div className="admin-promo-card-thumb">
                         <img
                           src={promoBannerItem.image}
                           alt={promoBannerItem.title}
-                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                           onError={(e) => {
                             (e.target as HTMLImageElement).src = '/images/promo_season_raw.jpg';
                           }}
                         />
                       </div>
 
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <h4 style={{ margin: '0 0 4px', fontSize: 15, fontWeight: 800 }}>
-                          {promoBannerItem.title}
-                        </h4>
-                        <div style={{ display: 'flex', gap: 10, fontSize: 12, color: '#666', alignItems: 'center', flexWrap: 'wrap' }}>
-                          <span style={{ background: '#f59e0b', color: '#fff', padding: '1px 6px', borderRadius: 4, fontWeight: 700, fontSize: 11 }}>
+                      <div className="admin-promo-card-info">
+                        <h4 className="admin-promo-heading">{promoBannerItem.title}</h4>
+                        <div className="admin-promo-meta-row">
+                          <span className="admin-promo-price-pill">
                             {promoBannerItem.priceLabel} {promoBannerItem.price}
                           </span>
-                          <span>Button: &quot;{promoBannerItem.ctaText}&quot;</span>
-                          <span>Target: {promoBannerItem.department}</span>
+                          <span className="admin-promo-cta-pill">
+                            Button: &quot;{promoBannerItem.ctaText}&quot;
+                          </span>
+                          <span className="admin-promo-target-pill">
+                            Target: {promoBannerItem.department}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -2286,7 +2255,7 @@ export function AdminPage({
               })()}
 
               <div className="admin-card">
-                <div className="admin-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div className="admin-card-header">
                   <div>
                     <h2 className="admin-card-title">Live Hero Carousel Slides ({dbBanners.filter((b) => b.type !== 'promo').length})</h2>
                     <p className="admin-card-subtitle">
@@ -2303,106 +2272,90 @@ export function AdminPage({
                   </button>
                 </div>
 
-                <div className="admin-banners-list" style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: 18 }}>
-                  {dbBanners.filter((b) => b.type !== 'promo').map((b, index) => (
-                    <div
-                      key={b.id || index}
-                      className={`admin-banner-row-card${editingBannerId === b.id ? ' editing' : ''}`}
-                      style={{
-                        display: 'flex',
-                        gap: 16,
-                        alignItems: 'center',
-                        padding: 14,
-                        borderRadius: 10,
-                        border: editingBannerId === b.id ? '2px solid #f04c32' : '1px solid rgba(0,0,0,0.08)',
-                        background: editingBannerId === b.id ? 'rgba(240, 76, 50, 0.04)' : 'rgba(0,0,0,0.01)',
-                      }}
-                    >
-                      {/* Thumbnail photo */}
+                <div className="admin-banners-list">
+                  {dbBanners.filter((b) => b.type !== 'promo').map((b, index) => {
+                    const isSlideEditing = editingBannerId === b.id;
+                    return (
                       <div
-                        style={{
-                          width: 90,
-                          height: 70,
-                          borderRadius: 8,
-                          overflow: 'hidden',
-                          background: '#eee',
-                          flexShrink: 0,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
+                        key={b.id || index}
+                        className={`admin-banner-row-card${isSlideEditing ? ' editing' : ''}`}
                       >
-                        <img
-                          src={b.image}
-                          alt={b.title}
-                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src = '/images/porto_hero.jpg';
-                          }}
-                        />
-                      </div>
+                        {/* Header strip: order badge, eyebrow tag, and target category */}
+                        <div className="admin-banner-card-head">
+                          <div className="admin-banner-head-left">
+                            <span className="admin-banner-order-badge">
+                              #{b.displayOrder ?? index + 1}
+                            </span>
+                            <span className="admin-banner-eyebrow-tag">
+                              {b.eyebrow}
+                            </span>
+                            <span className="admin-banner-target-dept">
+                              {b.department} &gt; {b.category}
+                            </span>
+                          </div>
+                          {isSlideEditing && (
+                            <span className="admin-banner-active-pill">
+                              <span className="pulsing-dot" /> Currently Editing
+                            </span>
+                          )}
+                        </div>
 
-                      {/* Info */}
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                          <span
-                            style={{
-                              fontSize: 10,
-                              fontWeight: 800,
-                              background: '#f04c32',
-                              color: '#fff',
-                              padding: '2px 6px',
-                              borderRadius: 4,
-                            }}
+                        {/* Body: Thumbnail and Details */}
+                        <div className="admin-banner-card-body">
+                          <div className="admin-banner-card-thumb">
+                            <img
+                              src={b.image}
+                              alt={b.title}
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = '/images/porto_hero.jpg';
+                              }}
+                            />
+                          </div>
+
+                          <div className="admin-banner-card-info">
+                            <h4 className="admin-banner-card-title">{b.title}</h4>
+                            <div className="admin-banner-card-meta">
+                              <span className="admin-banner-price-pill">
+                                {b.priceLabel || 'STARTING AT'}: <strong>{b.price}</strong>
+                              </span>
+                              <span className="admin-banner-cta-pill">
+                                Button: &quot;{b.ctaText}&quot;
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Footer Action Buttons */}
+                        <div className="admin-banner-card-actions">
+                          <button
+                            type="button"
+                            className="admin-banner-btn edit"
+                            onClick={() => handleSelectEditBanner(b)}
+                            title="Edit Banner Details"
                           >
-                            #{b.displayOrder ?? index + 1}
-                          </span>
-                          <span style={{ fontSize: 11, fontWeight: 700, color: '#f04c32', textTransform: 'uppercase' }}>
-                            {b.eyebrow}
-                          </span>
-                          <span style={{ fontSize: 11, color: '#888' }}>•</span>
-                          <span style={{ fontSize: 11, color: '#666', fontWeight: 600 }}>
-                            {b.department} &gt; {b.category}
-                          </span>
-                        </div>
-                        <h4 style={{ margin: '0 0 4px', fontSize: 14, fontWeight: 800 }}>
-                          {b.title}
-                        </h4>
-                        <div style={{ fontSize: 12, color: '#666' }}>
-                          <span>{b.priceLabel}: </span>
-                          <strong style={{ color: '#f04c32' }}>{b.price}</strong>
-                          <span style={{ marginLeft: 10, color: '#999' }}>Button: &quot;{b.ctaText}&quot;</span>
+                            <Edit size={14} />
+                            <span>{isSlideEditing ? 'Editing…' : 'Edit Details'}</span>
+                          </button>
+                          <button
+                            type="button"
+                            className="admin-banner-btn delete"
+                            onClick={() => handleDeleteBannerClick(b.id, b.title)}
+                            title="Delete Banner"
+                          >
+                            <Trash2 size={14} />
+                            <span>Delete</span>
+                          </button>
                         </div>
                       </div>
-
-                      {/* Actions */}
-                      <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                        <button
-                          type="button"
-                          className="admin-table-action-btn edit"
-                          onClick={() => handleSelectEditBanner(b)}
-                          title="Edit Banner"
-                        >
-                          <Edit size={14} /> Edit
-                        </button>
-                        <button
-                          type="button"
-                          className="admin-table-action-btn delete"
-                          onClick={() => handleDeleteBannerClick(b.id, b.title)}
-                          title="Delete Banner"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>
 
             {/* Right: Banner Editor / Creator Form */}
             <aside className="admin-preview-col">
-              <div className="admin-card">
+              <div id="admin-banner-editor-card" className="admin-card">
                 <div className="admin-card-header">
                   <h2 className="admin-card-title">
                     {editingBannerId ? (bannerForm.type === 'promo' ? 'Edit Season of Raw Promo Banner' : 'Edit Hero Slide Details') : 'Add New Hero Banner'}
@@ -2412,7 +2365,7 @@ export function AdminPage({
                   </p>
                 </div>
 
-                <form onSubmit={handleSaveBannerSubmit} style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <form onSubmit={handleSaveBannerSubmit} className="admin-banner-form">
                   {/* Banner Type */}
                   <label className="admin-field-label">
                     Banner Placement / Type
@@ -2440,7 +2393,7 @@ export function AdminPage({
                   </label>
 
                   {/* Eyebrow & Display Order */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  <div className="admin-two-col-grid">
                     <label className="admin-field-label">
                       Eyebrow Script Tag
                       <input
@@ -2465,7 +2418,7 @@ export function AdminPage({
                   </div>
 
                   {/* Department & Category */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  <div className="admin-two-col-grid">
                     <label className="admin-field-label">
                       Department
                       <select
@@ -2492,7 +2445,7 @@ export function AdminPage({
                   </div>
 
                   {/* Price Label & Price */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  <div className="admin-two-col-grid">
                     <label className="admin-field-label">
                       Price Label
                       <input
@@ -2532,14 +2485,7 @@ export function AdminPage({
                   <div className="admin-field-label">
                     Banner Photo (Database / Storage)
                     <div
-                      style={{
-                        border: '2px dashed rgba(0,0,0,0.15)',
-                        borderRadius: 8,
-                        padding: 16,
-                        textAlign: 'center',
-                        cursor: 'pointer',
-                        marginTop: 4,
-                      }}
+                      className="admin-banner-dropzone"
                       onClick={() => document.getElementById('admin-banner-file-input')?.click()}
                     >
                       <input
@@ -2552,11 +2498,11 @@ export function AdminPage({
                           if (f) handleBannerFile(f);
                         }}
                       />
-                      <Upload size={20} style={{ margin: '0 auto 6px', color: '#f04c32' }} />
-                      <div style={{ fontSize: 12, fontWeight: 700 }}>
+                      <Upload size={22} className="admin-banner-dropzone-icon" />
+                      <div className="admin-banner-dropzone-title">
                         {bannerImageFile ? bannerImageFile.name : 'Click to Upload Banner Image'}
                       </div>
-                      <small style={{ color: '#888', fontSize: 10 }}>Supports JPG, PNG, WEBP</small>
+                      <small className="admin-banner-dropzone-hint">Supports JPG, PNG, WEBP (Recommended: 1600x600px)</small>
                     </div>
 
                     <div style={{ marginTop: 8 }}>
@@ -2575,69 +2521,37 @@ export function AdminPage({
                   </div>
 
                   {/* Live Mini Preview */}
-                  <div style={{ marginTop: 6 }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: '#888', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>
-                      Live Banner Card Preview
+                  <div className="admin-banner-preview-wrap">
+                    <span className="admin-banner-preview-heading">
+                      Live Store Banner Simulation
                     </span>
-                    <div
-                      style={{
-                        borderRadius: 10,
-                        overflow: 'hidden',
-                        background: 'radial-gradient(ellipse at 70% 40%, #ffffff 0%, #f6f4ee 60%, #eee9de 100%)',
-                        border: '1px solid rgba(0,0,0,0.1)',
-                        display: 'flex',
-                        position: 'relative',
-                        minHeight: 160,
-                        padding: 16,
-                      }}
-                    >
-                      <div style={{ zIndex: 2, maxWidth: '65%' }}>
-                        <span style={{ fontSize: 9, fontWeight: 800, color: '#f04c32', textTransform: 'uppercase' }}>
+                    <div className="admin-banner-live-preview-box">
+                      <div className="admin-banner-preview-content">
+                        <span className="admin-banner-preview-cat">
                           {bannerForm.department} • {bannerForm.category}
                         </span>
-                        <div style={{ fontFamily: 'Playfair Display, serif', fontStyle: 'italic', color: '#f04c32', fontSize: 18 }}>
+                        <div className="admin-banner-preview-eyebrow">
                           {bannerForm.eyebrow}
                         </div>
-                        <h3 style={{ margin: '2px 0 6px', fontSize: 15, fontWeight: 800, lineHeight: 1.1 }}>
+                        <h3 className="admin-banner-preview-title">
                           {bannerForm.title || 'BANNER TITLE'}
                         </h3>
-                        <div style={{ fontSize: 11, color: '#555' }}>
+                        <div className="admin-banner-preview-pricing">
                           <span>{bannerForm.priceLabel} </span>
-                          <strong style={{ color: '#f04c32', fontSize: 14 }}>{bannerForm.price}</strong>
+                          <strong className="admin-banner-preview-price">{bannerForm.price}</strong>
                         </div>
                         <button
                           type="button"
-                          style={{
-                            marginTop: 10,
-                            background: '#181818',
-                            color: '#fff',
-                            border: 'none',
-                            padding: '5px 12px',
-                            fontSize: 10,
-                            fontWeight: 800,
-                            borderRadius: 4,
-                          }}
+                          className="admin-banner-preview-cta"
                         >
                           {bannerForm.ctaText}
                         </button>
                       </div>
 
-                      <div
-                        style={{
-                          position: 'absolute',
-                          right: 10,
-                          bottom: 10,
-                          top: 10,
-                          width: '38%',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
+                      <div className="admin-banner-preview-img-wrap">
                         <img
                           src={bannerImagePreview || bannerForm.image || '/images/porto_hero.jpg'}
                           alt="preview"
-                          style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                           onError={(e) => {
                             (e.target as HTMLImageElement).src = '/images/porto_hero.jpg';
                           }}
@@ -2647,11 +2561,10 @@ export function AdminPage({
                   </div>
 
                   {/* Actions */}
-                  <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
+                  <div className="admin-banner-form-actions">
                     <button
                       type="submit"
                       className="admin-publish-submit-btn"
-                      style={{ flex: 1 }}
                       disabled={bannerSubmitting}
                     >
                       {bannerSubmitting ? (
@@ -3217,78 +3130,25 @@ function CategoryPhotoCard({
   }, [cat]);
 
   return (
-    <div
-      style={{
-        borderRadius: 12,
-        border: '1px solid rgba(0,0,0,0.08)',
-        background: '#fff',
-        boxShadow: '0 2px 10px rgba(0,0,0,0.03)',
-        overflow: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
+    <div className="admin-photo-manage-card">
       {/* Category Preview Tile */}
-      <div
-        style={{
-          height: 180,
-          background: '#f4f3ef',
-          position: 'relative',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          overflow: 'hidden',
-        }}
-      >
+      <div className="admin-photo-card-media">
         <img
           src={image}
           alt={name}
-          style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+          className="admin-photo-card-img"
           onError={(e) => {
             (e.target as HTMLImageElement).src = '/images/sport_shoes_lifestyle.jpg';
           }}
         />
-        <div
-          style={{
-            position: 'absolute',
-            bottom: 8,
-            left: 8,
-            right: 8,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
-        >
-          <span
-            style={{
-              background: 'rgba(0,0,0,0.75)',
-              color: '#fff',
-              fontSize: 11,
-              fontWeight: 800,
-              padding: '3px 8px',
-              borderRadius: 4,
-              letterSpacing: '0.05em',
-            }}
-          >
+        <div className="admin-photo-card-overlay">
+          <span className="admin-photo-name-badge">
             {name}
           </span>
           <button
             type="button"
+            className="admin-photo-change-btn"
             onClick={() => fileInputRef.current?.click()}
-            style={{
-              background: '#f04c32',
-              color: '#fff',
-              border: 'none',
-              borderRadius: 4,
-              padding: '4px 10px',
-              fontSize: 11,
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 4,
-              boxShadow: '0 2px 6px rgba(240,76,50,0.4)',
-            }}
           >
             <Upload size={12} /> Change Photo
           </button>
@@ -3311,8 +3171,8 @@ function CategoryPhotoCard({
       </div>
 
       {/* Settings Form */}
-      <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 10, flex: 1 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+      <div className="admin-photo-card-body">
+        <div className="admin-two-col-grid" style={{ gap: 8 }}>
           <label className="admin-field-label" style={{ margin: 0, fontSize: 11 }}>
             Category Label
             <input
@@ -3396,75 +3256,24 @@ function VibePhotoCard({
   }, [vibe]);
 
   return (
-    <div
-      style={{
-        borderRadius: 12,
-        border: '1px solid rgba(0,0,0,0.08)',
-        background: '#fff',
-        boxShadow: '0 2px 10px rgba(0,0,0,0.03)',
-        overflow: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
-      <div
-        style={{
-          height: 180,
-          background: '#1a1a1a',
-          position: 'relative',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          overflow: 'hidden',
-        }}
-      >
+    <div className="admin-photo-manage-card">
+      <div className="admin-photo-card-media dark-bg">
         <img
           src={image}
           alt={title}
-          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          className="admin-photo-card-img"
           onError={(e) => {
             (e.target as HTMLImageElement).src = '/images/tool_kjacket.png';
           }}
         />
-        <div
-          style={{
-            position: 'absolute',
-            bottom: 8,
-            left: 8,
-            right: 8,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
-        >
-          <span
-            style={{
-              background: 'rgba(0,0,0,0.75)',
-              color: '#fff',
-              fontSize: 11,
-              fontWeight: 800,
-              padding: '3px 8px',
-              borderRadius: 4,
-            }}
-          >
+        <div className="admin-photo-card-overlay">
+          <span className="admin-photo-name-badge">
             {title} {vibe.layout === 'tall' ? '(Tall Tile)' : ''}
           </span>
           <button
             type="button"
+            className="admin-photo-change-btn"
             onClick={() => fileInputRef.current?.click()}
-            style={{
-              background: '#f04c32',
-              color: '#fff',
-              border: 'none',
-              borderRadius: 4,
-              padding: '4px 10px',
-              fontSize: 11,
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 4,
-            }}
           >
             <Upload size={12} /> Change Photo
           </button>
@@ -3486,8 +3295,8 @@ function VibePhotoCard({
         </div>
       </div>
 
-      <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 10, flex: 1 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+      <div className="admin-photo-card-body">
+        <div className="admin-two-col-grid" style={{ gap: 8 }}>
           <label className="admin-field-label" style={{ margin: 0, fontSize: 11 }}>
             Tile Heading
             <input
