@@ -29,6 +29,8 @@ import {
   Palette,
   User,
   EyeOff,
+  LayoutGrid,
+  List,
 } from 'lucide-react';
 import type { Product, Banner, CategoryCard, VibeCard } from '../types';
 import {
@@ -260,6 +262,9 @@ export function AdminPage({
 
   // Tab: 'inventory' | 'add' | 'banners' | 'categories'
   const [activeTab, setActiveTab] = useState<'inventory' | 'add' | 'banners' | 'categories'>('inventory');
+
+  // Mobile Inventory View Mode: 'cards' | 'table'
+  const [mobileViewMode, setMobileViewMode] = useState<'cards' | 'table'>('cards');
 
   // Form State
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
@@ -1306,6 +1311,31 @@ export function AdminPage({
 
           {/* Products Table Card */}
           <div className="admin-card-container">
+            <div className="admin-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Package size={17} />
+                <h3>Products Inventory ({filteredProducts.length})</h3>
+              </div>
+              <div className="admin-view-toggle">
+                <button
+                  type="button"
+                  className={`admin-view-toggle-btn${mobileViewMode === 'cards' ? ' active' : ''}`}
+                  onClick={() => setMobileViewMode('cards')}
+                  title="Card View"
+                >
+                  <LayoutGrid size={13} /> Cards
+                </button>
+                <button
+                  type="button"
+                  className={`admin-view-toggle-btn${mobileViewMode === 'table' ? ' active' : ''}`}
+                  onClick={() => setMobileViewMode('table')}
+                  title="Table View"
+                >
+                  <List size={13} /> Table
+                </button>
+              </div>
+            </div>
+
             {filteredProducts.length === 0 ? (
               <div className="admin-empty-box">
                 <Package size={44} />
@@ -1320,8 +1350,111 @@ export function AdminPage({
                 </button>
               </div>
             ) : (
-              <div className="admin-responsive-table-wrap">
-                <table className="admin-data-table">
+              <>
+                {/* Mobile Card-Based Product List (Touch-ergonomic, 100% responsive) */}
+                <div className={`admin-mobile-cards-list${mobileViewMode === 'table' ? ' force-hide' : ''}`}>
+                  {filteredProducts.map((p) => {
+                    const stockVal = p.stock ?? 50;
+                    const isLowStock = stockVal < 20;
+                    return (
+                      <div key={p.id} className="admin-mobile-product-card">
+                        {/* Top Row: Photo + Titles + ID + Tag */}
+                        <div className="admin-mobile-card-top">
+                          <div className="admin-mobile-card-thumb">
+                            <img src={p.image} alt={p.name} loading="lazy" />
+                          </div>
+                          <div className="admin-mobile-card-info">
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 6 }}>
+                              <h4 className="admin-mobile-card-title">{p.name}</h4>
+                              {p.tag && <span className="admin-tag-chip">{p.tag}</span>}
+                            </div>
+                            <span className="admin-mobile-card-id">ID: {p.id.slice(0, 10)}…</span>
+                            <div className="admin-mobile-card-tags">
+                              <span className="admin-dept-badge">
+                                {p.department === 'Jackets' ? '🧥 Jackets' : p.department === 'Headwear' ? '🪖 Headwear' : p.department === 'Accessories' ? '🧤 Accessories' : '👟 Footwear'}
+                              </span>
+                              <span className="admin-cat-badge">{p.category}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Middle Row: Price + Stock Counter Stepper */}
+                        <div className="admin-mobile-card-mid">
+                          <div>
+                            <span style={{ fontSize: 10, color: '#888', display: 'block', textTransform: 'uppercase', fontWeight: 700 }}>Price</span>
+                            <strong className="admin-mobile-price">{p.price}</strong>
+                          </div>
+
+                          <div className="admin-stock-cell-box">
+                            <span className={`admin-stock-pill ${isLowStock ? 'low' : 'ok'}`}>
+                              {isLowStock ? <AlertTriangle size={12} /> : <Check size={12} />}
+                              {stockVal} units
+                            </span>
+                            <div className="admin-stock-quick-btns">
+                              <button
+                                type="button"
+                                className="admin-stock-delta-btn minus"
+                                onClick={() => handleInlineStockDelta(p, -1)}
+                                title="Quick decrease: -1 unit"
+                                aria-label="Decrease stock by 1"
+                              >
+                                <Minus size={11} />
+                              </button>
+                              <button
+                                type="button"
+                                className="admin-stock-delta-btn plus"
+                                onClick={() => handleInlineStockDelta(p, 1)}
+                                title="Quick increase: +1 unit"
+                                aria-label="Increase stock by 1"
+                              >
+                                <Plus size={11} />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Variants preview if any */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, color: '#777' }}>
+                          <span>Sizes: {p.sizes.length > 0 ? p.sizes.join(', ') : 'None'}</span>
+                          <div className="variant-dots">
+                            {p.colors.slice(0, 4).map((c: string) => (
+                              <span
+                                key={c}
+                                className="mini-color-dot"
+                                style={{ background: COLOR_HEX[c] || '#888' }}
+                                title={c}
+                              />
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Bottom Row: Actions */}
+                        <div className="admin-mobile-card-actions">
+                          <button
+                            type="button"
+                            className="admin-mobile-edit-btn"
+                            onClick={() => handleStartEditProduct(p)}
+                          >
+                            <Edit size={13} /> Edit Stock &amp; Details
+                          </button>
+                          <button
+                            type="button"
+                            className="admin-mobile-del-btn"
+                            onClick={() => handleDelete(p.id)}
+                            disabled={deletingId === p.id}
+                            title={`Delete ${p.name}`}
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Desktop / Tablet Multi-Column Data Table */}
+                <div className={`admin-responsive-table-wrap${mobileViewMode === 'cards' ? ' mobile-hidden' : ''}`}>
+                  <table className="admin-data-table">
                   <thead>
                     <tr>
                       <th style={{ width: 68 }}>Photo</th>
@@ -1439,6 +1572,7 @@ export function AdminPage({
                   </tbody>
                 </table>
               </div>
+              </>
             )}
           </div>
         </section>
@@ -2573,7 +2707,7 @@ export function AdminPage({
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 18, padding: 20 }}>
+            <div className="admin-cat-cards-grid">
               {categoryList.map((cat) => (
                 <CategoryPhotoCard
                   key={cat.id}
@@ -2597,7 +2731,7 @@ export function AdminPage({
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 18, padding: 20 }}>
+            <div className="admin-vibe-cards-grid">
               {vibeList.map((vibe) => (
                 <VibePhotoCard
                   key={vibe.id}

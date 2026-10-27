@@ -5616,6 +5616,557 @@ h2 { font-size: clamp(43px, 5vw, 71px); margin: 18px 0 0; }.heading-note { max-w
   color: #999999;
 }
 
+/* ── Mobile Product Cards List & Dual View Toggle ── */
+.admin-mobile-cards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+}
+.admin-mobile-product-card {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
+  transition: all 0.15s ease;
+}
+.dark .admin-mobile-product-card {
+  background: #1e1e1e;
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: none;
+}
+.admin-mobile-card-top {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.admin-mobile-card-thumb {
+  width: 58px;
+  height: 58px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.04);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+.dark .admin-mobile-card-thumb {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+.admin-mobile-card-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.admin-mobile-card-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.admin-mobile-card-title {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #111111;
+  line-height: 1.25;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dark .admin-mobile-card-title {
+  color: #ffffff;
+}
+.admin-mobile-card-id {
+  font-size: 10.5px;
+  color: #888888;
+  font-family: monospace;
+}
+.admin-mobile-card-tags {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+.admin-mobile-card-mid {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  background: rgba(0, 0, 0, 0.02);
+  border-radius: 8px;
+}
+.dark .admin-mobile-card-mid {
+  background: rgba(255, 255, 255, 0.03);
+}
+.admin-mobile-price {
+  font-size: 16px;
+  font-weight: 800;
+  color: #111111;
+}
+.dark .admin-mobile-price {
+  color: #ffffff;
+}
+.admin-mobile-card-bot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+.dark .admin-mobile-card-bot {
+  border-top-color: rgba(255, 255, 255, 0.06);
+}
+.admin-mobile-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+.admin-mobile-edit-btn {
+  flex: 1;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: rgba(37, 99, 235, 0.08);
+  border: 1px solid rgba(37, 99, 235, 0.25);
+  color: #1d4ed8;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.admin-mobile-edit-btn:hover {
+  background: #2563eb;
+  color: #ffffff;
+}
+.dark .admin-mobile-edit-btn {
+  background: rgba(59, 130, 246, 0.14);
+  border-color: rgba(96, 165, 250, 0.3);
+  color: #93c5fd;
+}
+.admin-mobile-del-btn {
+  height: 36px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(220, 38, 38, 0.06);
+  border: 1px solid rgba(220, 38, 38, 0.25);
+  color: #dc2626;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.admin-mobile-del-btn:hover {
+  background: #dc2626;
+  color: #ffffff;
+}
+.dark .admin-mobile-del-btn {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(248, 113, 113, 0.3);
+  color: #fca5a5;
+}
+
+/* View Mode Selector for Table Header */
+.admin-view-toggle {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 8px;
+  padding: 2px;
+  gap: 2px;
+}
+.dark .admin-view-toggle {
+  background: rgba(255, 255, 255, 0.08);
+}
+.admin-view-toggle-btn {
+  border: none;
+  background: transparent;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #666666;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s;
+}
+.dark .admin-view-toggle-btn {
+  color: #aaaaaa;
+}
+.admin-view-toggle-btn.active {
+  background: #ffffff;
+  color: #111111;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+.dark .admin-view-toggle-btn.active {
+  background: #282828;
+  color: #ffffff;
+}
+
+/* Section Grids */
+.admin-section-grid {
+  display: grid;
+  grid-template-columns: 1fr 400px;
+  gap: 20px;
+  align-items: start;
+}
+.admin-cat-cards-grid,
+.admin-vibe-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  padding: 18px;
+}
+
+/* Desktop Defaults: Show Table, Hide Mobile Cards */
+@media (min-width: 769px) {
+  .admin-mobile-cards-list {
+    display: none !important;
+  }
+  .admin-view-toggle {
+    display: none !important;
+  }
+  .admin-responsive-table-wrap {
+    display: block !important;
+  }
+}
+
+/* ==========================================================================
+   ADMIN DASHBOARD MOBILE RESPONSIVE SUITE (< 768px and < 480px)
+   ========================================================================== */
+
+@media (max-width: 768px) {
+  /* ── 1. Page Container & Horizontal Overflow Fix ── */
+  .admin-dashboard-container {
+    padding: 12px 10px 80px !important;
+    width: 100% !important;
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
+    box-sizing: border-box !important;
+  }
+  .admin-section-content {
+    min-width: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    gap: 14px !important;
+  }
+
+  /* ── 2. Top Bar (Header) ── */
+  .admin-topbar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+    padding-bottom: 12px !important;
+  }
+  .admin-topbar-left {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+    gap: 10px !important;
+  }
+  .admin-topbar-brand {
+    order: 2 !important;
+  }
+  .admin-topbar-logo-img {
+    height: 34px !important;
+    max-width: 140px !important;
+  }
+  .admin-store-btn {
+    order: 1 !important;
+    padding: 7px 11px !important;
+    font-size: 12px !important;
+    border-radius: 8px !important;
+  }
+  .admin-topbar-right {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+    gap: 8px !important;
+  }
+  .admin-db-status-btn {
+    flex: 1 !important;
+    min-width: 0 !important;
+    padding: 7px 10px !important;
+    font-size: 11.5px !important;
+    justify-content: center !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+  .admin-db-status-btn span.status-indicator {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+  .admin-signout-btn {
+    padding: 7px 12px !important;
+    font-size: 11.5px !important;
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* ── 3. KPI Stat Cards Bar (2x2 Balanced Grid) ── */
+  .admin-kpi-bar {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+    margin: 14px 0 !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  .admin-kpi-card {
+    padding: 12px !important;
+    gap: 10px !important;
+    border-radius: 12px !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+  .kpi-icon-wrap {
+    width: 36px !important;
+    height: 36px !important;
+    border-radius: 9px !important;
+    flex-shrink: 0 !important;
+  }
+  .kpi-icon-wrap svg {
+    width: 18px !important;
+    height: 18px !important;
+  }
+  .kpi-content {
+    min-width: 0 !important;
+    overflow: hidden !important;
+  }
+  .kpi-label {
+    font-size: 9.5px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    letter-spacing: 0.02em !important;
+  }
+  .kpi-value {
+    font-size: 18px !important;
+    margin: 1px 0 !important;
+  }
+  .kpi-sub {
+    font-size: 9.5px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  /* ── 4. Navigation Tabs Bar (Horizontal Momentum Scroll) ── */
+  .admin-nav-tabs {
+    gap: 6px !important;
+    margin-bottom: 14px !important;
+    padding-bottom: 8px !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+    margin-left: -10px !important;
+    margin-right: -10px !important;
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+  }
+  .admin-nav-tabs::-webkit-scrollbar {
+    display: none !important;
+  }
+  .admin-tab-btn {
+    padding: 8px 12px !important;
+    font-size: 12.5px !important;
+    border-radius: 8px !important;
+    flex-shrink: 0 !important;
+    gap: 6px !important;
+  }
+  .admin-tab-btn svg {
+    width: 15px !important;
+    height: 15px !important;
+  }
+  .admin-tab-badge {
+    font-size: 10px !important;
+    padding: 2px 6px !important;
+  }
+
+  /* ── 5. Search & Filters ── */
+  .admin-filter-bar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  .admin-search-box {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    padding: 9px 12px !important;
+    box-sizing: border-box !important;
+  }
+  .admin-search-box input {
+    font-size: 13px !important;
+  }
+  .admin-dept-filter-group {
+    width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+    padding-bottom: 4px !important;
+    margin-left: -10px !important;
+    margin-right: -10px !important;
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+  }
+  .admin-dept-filter-group::-webkit-scrollbar {
+    display: none !important;
+  }
+  .admin-filter-pill {
+    padding: 6px 11px !important;
+    font-size: 11.5px !important;
+    flex-shrink: 0 !important;
+  }
+  .admin-stock-filter-group {
+    width: 100% !important;
+  }
+  .admin-stock-toggle-btn {
+    width: 100% !important;
+    justify-content: center !important;
+    padding: 8px 12px !important;
+  }
+
+  /* ── 6. Card Container & Mobile Cards List ── */
+  .admin-card-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    border-radius: 14px !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+  }
+  .admin-card-header {
+    padding: 12px 14px !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+  .admin-card-header h3 {
+    font-size: 13.5px !important;
+  }
+
+  /* Responsive Table Wrapper (scrollable with zero page blowout) */
+  .admin-responsive-table-wrap {
+    min-width: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    display: block !important;
+  }
+  .admin-data-table {
+    min-width: 720px !important;
+  }
+  .admin-responsive-table-wrap.mobile-hidden {
+    display: none !important;
+  }
+  .admin-mobile-cards-list.force-hide {
+    display: none !important;
+  }
+
+  /* ── 7. Tab 2 (Add Product Form) ── */
+  .admin-editor-split {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+  .admin-form-col {
+    gap: 14px !important;
+  }
+  .admin-two-col-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+  .admin-dept-selector {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+  }
+  .admin-dept-select-btn {
+    padding: 8px 6px !important;
+  }
+  .admin-dept-select-btn .dept-text {
+    font-size: 11px !important;
+  }
+  .admin-chips-selector,
+  .admin-colors-selector {
+    gap: 5px !important;
+  }
+  .admin-variant-chip,
+  .admin-color-chip {
+    padding: 5px 9px !important;
+    font-size: 11px !important;
+  }
+  .admin-publish-submit-btn {
+    height: 46px !important;
+    font-size: 14px !important;
+  }
+
+  /* ── 8. Tab 3 (Banners) & Tab 4 (Categories) ── */
+  .admin-section-grid {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+  .admin-banner-row-card {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+  }
+  .admin-cat-cards-grid,
+  .admin-vibe-cards-grid {
+    grid-template-columns: 1fr !important;
+    padding: 12px !important;
+    gap: 12px !important;
+  }
+  .admin-card {
+    border-radius: 12px !important;
+  }
+
+  /* ── 9. Modals on Mobile ── */
+  .admin-modal-overlay {
+    padding: 10px !important;
+  }
+  .admin-modal-card {
+    max-width: 100% !important;
+    width: 100% !important;
+    border-radius: 14px !important;
+    max-height: 92vh !important;
+    overflow-y: auto !important;
+  }
+  .admin-modal-header,
+  .admin-modal-body {
+    padding: 14px 16px !important;
+  }
+  .admin-modal-actions {
+    flex-direction: column !important;
+  }
+  .admin-btn-save-db,
+  .admin-btn-disconnect-db {
+    width: 100% !important;
+  }
+}
+
 /* ==========================================================================
    OFFICIAL BRAND LOGO STYLES (Akshat_logo.png)
    ========================================================================== */
