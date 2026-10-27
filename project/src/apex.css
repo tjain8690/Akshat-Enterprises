@@ -1129,19 +1129,17 @@
   padding: 0;
   overflow: hidden;
   border-radius: var(--ax-radius) var(--ax-radius) 0 0;
+  user-select: none;
+  -webkit-user-select: none;
 }
 .ax-card-img .card-slider-track {
   display: flex !important;
   width: 100% !important;
   height: 100% !important;
-  overflow-x: auto !important;
-  overflow-y: hidden !important;
-  scroll-snap-type: x mandatory !important;
-  scroll-behavior: smooth !important;
-  -webkit-overflow-scrolling: touch !important;
-  scrollbar-width: none !important;
-  -ms-overflow-style: none !important;
-  touch-action: pan-x pan-y !important;
+  overflow: visible !important;
+  scroll-snap-type: none !important;
+  touch-action: pan-y !important;
+  will-change: transform;
 }
 .ax-card-img .card-slider-track::-webkit-scrollbar {
   display: none !important;
@@ -1151,12 +1149,13 @@
 .ax-card-img .card-slider-slide {
   flex: 0 0 100% !important;
   min-width: 100% !important;
+  max-width: 100% !important;
   width: 100% !important;
   height: 100% !important;
-  scroll-snap-align: start !important;
-  scroll-snap-stop: always !important;
   position: relative !important;
   overflow: hidden !important;
+  user-select: none;
+  -webkit-user-select: none;
 }
 .ax-card-img .product-card-img,
 .ax-card-img img,

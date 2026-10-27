@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from 'react';
+import { useState, useRef, useMemo, useEffect } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
@@ -15,12 +15,27 @@ import type { Product, CartItem } from '../types';
 import { COLOR_HEX, whatsappLink, getProductWhatsAppEnquiry } from '../constants';
 import { useNavigate } from 'react-router-dom';
 
-export function ProductImageSlider({ images, name }: { images: string[]; name: string }) {
+export function ProductImageSlider({
+  images,
+  name,
+  onSwipeChange,
+}: {
+  images: string[];
+  name: string;
+  onSwipeChange?: (isSwiping: boolean) => void;
+}) {
   const [idx, setIdx] = useState(0);
-  const trackRef = useRef<HTMLDivElement>(null);
+  const [dragOffset, setDragOffset] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const sliderRef = useRef<HTMLDivElement>(null);
   const touchStartXRef = useRef(0);
   const touchStartYRef = useRef(0);
+  const touchStartTimeRef = useRef(0);
   const isSwipingRef = useRef(false);
+  const isVerticalScrollRef = useRef(false);
+  const lastSwipeTimeRef = useRef(0);
+  const ignoreNextClickRef = useRef(false);
 
   // Filter valid images and deduplicate
   const valid = useMemo(() => {
@@ -28,75 +43,146 @@ export function ProductImageSlider({ images, name }: { images: string[]; name: s
     return Array.from(new Set(list));
   }, [images]);
 
+  // Intercept and swallow any clicks that fire during or immediately after a touch swipe
+  useEffect(() => {
+    const el = sliderRef.current;
+    if (!el) return;
+
+    const handleNativeClick = (e: MouseEvent) => {
+      const timeSinceSwipe = Date.now() - lastSwipeTimeRef.current;
+      if (timeSinceSwipe < 650 || ignoreNextClickRef.current || isSwipingRef.current) {
+        e.stopPropagation();
+        e.preventDefault();
+        e.stopImmediatePropagation?.();
+        ignoreNextClickRef.current = false;
+      }
+    };
+
+    el.addEventListener('click', handleNativeClick, { capture: true });
+    return () => {
+      el.removeEventListener('click', handleNativeClick, { capture: true });
+    };
+  }, []);
+
   if (valid.length === 0) return null;
   if (valid.length === 1) {
     return <img src={valid[0]} alt={name} className="product-card-img" draggable={false} />;
   }
 
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const el = e.currentTarget;
-    if (el.clientWidth > 0) {
-      const current = Math.round(el.scrollLeft / el.clientWidth);
-      if (current !== idx && current >= 0 && current < valid.length) {
-        setIdx(current);
-      }
-    }
-  };
-
-  const scrollToIdx = (targetIdx: number) => {
-    const nextIdx = (targetIdx + valid.length) % valid.length;
-    setIdx(nextIdx);
-    if (trackRef.current) {
-      const width = trackRef.current.clientWidth;
-      trackRef.current.scrollTo({
-        left: nextIdx * width,
-        behavior: 'smooth',
-      });
-    }
-  };
-
   const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartXRef.current = e.touches[0].clientX;
-    touchStartYRef.current = e.touches[0].clientY;
+    if (valid.length <= 1) return;
+    const touch = e.touches[0];
+    touchStartXRef.current = touch.clientX;
+    touchStartYRef.current = touch.clientY;
+    touchStartTimeRef.current = Date.now();
     isSwipingRef.current = false;
+    isVerticalScrollRef.current = false;
+    setIsDragging(false);
+    setDragOffset(0);
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    const diffX = Math.abs(e.touches[0].clientX - touchStartXRef.current);
-    const diffY = Math.abs(e.touches[0].clientY - touchStartYRef.current);
-    if (diffX > 8 && diffX > diffY) {
-      isSwipingRef.current = true;
+    if (valid.length <= 1) return;
+    if (isVerticalScrollRef.current) return;
+
+    const touch = e.touches[0];
+    const deltaX = touch.clientX - touchStartXRef.current;
+    const deltaY = touch.clientY - touchStartYRef.current;
+
+    // Detect gesture direction early in the movement
+    if (!isSwipingRef.current && !isVerticalScrollRef.current) {
+      if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 8) {
+        // User is scrolling the page vertically; let native browser scroll handle it
+        isVerticalScrollRef.current = true;
+        return;
+      }
+      if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 8) {
+        // User is swiping images horizontally
+        isSwipingRef.current = true;
+        setIsDragging(true);
+        onSwipeChange?.(true);
+      }
+    }
+
+    if (isSwipingRef.current) {
+      // Apply rubber-band resistance when pulling beyond the ends
+      let offset = deltaX;
+      if ((idx === 0 && deltaX > 0) || (idx === valid.length - 1 && deltaX < 0)) {
+        offset = deltaX * 0.3;
+      }
+      setDragOffset(offset);
     }
   };
 
   const handleTouchEnd = () => {
+    if (valid.length <= 1) return;
+
     if (isSwipingRef.current) {
-      setTimeout(() => {
-        isSwipingRef.current = false;
-      }, 200);
+      const elapsed = Date.now() - touchStartTimeRef.current;
+      const absOffset = Math.abs(dragOffset);
+
+      // Fast flick or standard drag threshold
+      const isFlick = elapsed < 300 && absOffset > 20;
+      const isDragThreshold = absOffset > 38;
+
+      if (isFlick || isDragThreshold) {
+        if (dragOffset < 0 && idx < valid.length - 1) {
+          setIdx((prev) => prev + 1);
+        } else if (dragOffset > 0 && idx > 0) {
+          setIdx((prev) => prev - 1);
+        }
+      }
+
+      lastSwipeTimeRef.current = Date.now();
+      ignoreNextClickRef.current = true;
     }
+
+    setIsDragging(false);
+    setDragOffset(0);
+    isVerticalScrollRef.current = false;
+
+    // Block synthetic clicks from firing on card navigation
+    setTimeout(() => {
+      isSwipingRef.current = false;
+      ignoreNextClickRef.current = false;
+      onSwipeChange?.(false);
+    }, 600);
+  };
+
+  const handleTouchCancel = () => {
+    setIsDragging(false);
+    setDragOffset(0);
+    isSwipingRef.current = false;
+    isVerticalScrollRef.current = false;
+    onSwipeChange?.(false);
   };
 
   const handleClickCapture = (e: React.MouseEvent) => {
-    // If the touch was a horizontal swipe gesture, intercept click so modal isn't opened while swiping
-    if (isSwipingRef.current) {
+    const timeSinceSwipe = Date.now() - lastSwipeTimeRef.current;
+    if (timeSinceSwipe < 650 || ignoreNextClickRef.current || isSwipingRef.current) {
       e.stopPropagation();
       e.preventDefault();
-      isSwipingRef.current = false;
+      ignoreNextClickRef.current = false;
     }
   };
 
   return (
-    <div className="card-slider">
-      {/* Horizontal smooth-scroll snap track for direct mobile touch swiping */}
+    <div
+      className="card-slider"
+      ref={sliderRef}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchCancel}
+      onClickCapture={handleClickCapture}
+    >
+      {/* Hardware-accelerated CSS transform track with real-time drag */}
       <div
         className="card-slider-track"
-        ref={trackRef}
-        onScroll={handleScroll}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        onClickCapture={handleClickCapture}
+        style={{
+          transform: `translateX(calc(-${idx * 100}% + ${dragOffset}px))`,
+          transition: isDragging ? 'none' : 'transform 0.28s cubic-bezier(0.25, 1, 0.5, 1)',
+        }}
       >
         {valid.map((src, i) => (
           <div className="card-slider-slide" key={`${src}-${i}`}>
@@ -117,7 +203,7 @@ export function ProductImageSlider({ images, name }: { images: string[]; name: s
         className="slider-arrow slider-prev"
         onClick={(e) => {
           e.stopPropagation();
-          scrollToIdx(idx - 1);
+          setIdx((prev) => (prev - 1 + valid.length) % valid.length);
         }}
         aria-label="Previous image"
       >
@@ -129,7 +215,7 @@ export function ProductImageSlider({ images, name }: { images: string[]; name: s
         className="slider-arrow slider-next"
         onClick={(e) => {
           e.stopPropagation();
-          scrollToIdx(idx + 1);
+          setIdx((prev) => (prev + 1) % valid.length);
         }}
         aria-label="Next image"
       >
@@ -137,7 +223,7 @@ export function ProductImageSlider({ images, name }: { images: string[]; name: s
       </button>
 
       {/* Pagination dots */}
-      <div className="slider-dots">
+      <div className="slider-dots" onClick={(e) => e.stopPropagation()}>
         {valid.map((_, i) => (
           <button
             type="button"
@@ -145,7 +231,7 @@ export function ProductImageSlider({ images, name }: { images: string[]; name: s
             className={`slider-dot${i === idx ? ' active' : ''}`}
             onClick={(e) => {
               e.stopPropagation();
-              scrollToIdx(i);
+              setIdx(i);
             }}
             aria-label={`Image ${i + 1}`}
           />
@@ -250,7 +336,12 @@ export function ProductCard({
   };
 
   // Card / Image click action -> opens product description page
+  const isSwipingCardRef = useRef(false);
+
   const handleCardClick = (e: React.MouseEvent) => {
+    if (isSwipingCardRef.current) {
+      return;
+    }
     const target = e.target as HTMLElement;
     // Don't trigger if user interacted with a button, link, slider control, or input
     if (target.closest('button') || target.closest('a') || target.closest('input')) {
@@ -329,6 +420,9 @@ export function ProductCard({
           <ProductImageSlider
             images={[product.image, ...(product.images ?? [])]}
             name={product.name}
+            onSwipeChange={(swiping) => {
+              isSwipingCardRef.current = swiping;
+            }}
           />
         </div>
       </div>

@@ -333,19 +333,21 @@ h2 { font-size: clamp(43px, 5vw, 71px); margin: 18px 0 0; }.heading-note { max-w
 .filter-dept-chip.active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
 
 /* ── Card Image Slider ──────────────────────────────────────────────────── */
-.card-slider { position: relative; width: 100%; height: 100%; overflow: hidden; }
+.card-slider {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+}
 .card-slider-track {
   display: flex;
   width: 100%;
   height: 100%;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scroll-snap-type: x mandatory;
-  scroll-behavior: smooth;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-  touch-action: pan-x pan-y;
+  overflow: visible;
+  touch-action: pan-y;
+  will-change: transform;
 }
 .card-slider-track::-webkit-scrollbar {
   display: none;
@@ -355,10 +357,9 @@ h2 { font-size: clamp(43px, 5vw, 71px); margin: 18px 0 0; }.heading-note { max-w
 .card-slider-slide {
   flex: 0 0 100%;
   min-width: 100%;
+  max-width: 100%;
   width: 100%;
   height: 100%;
-  scroll-snap-align: start;
-  scroll-snap-stop: always;
   position: relative;
   overflow: hidden;
 }
@@ -377,9 +378,37 @@ h2 { font-size: clamp(43px, 5vw, 71px); margin: 18px 0 0; }.heading-note { max-w
 .slider-prev { left: 8px; }
 .slider-next { right: 8px; }
 .slider-arrow:hover { background: white; transform: translateY(-50%) scale(1.1); }
-.slider-dots { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); display: flex; gap: 5px; z-index: 3; pointer-events: auto; }
-.slider-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,.55); border: none; padding: 0; cursor: pointer; transition: background .2s, transform .2s; }
-.slider-dot.active { background: white; transform: scale(1.3); }
+.slider-dots {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  z-index: 4;
+  pointer-events: auto;
+  padding: 3px 6px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.32);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+.slider-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.55);
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: all 0.22s ease;
+}
+.slider-dot.active {
+  width: 14px;
+  border-radius: 4px;
+  background: #ffffff;
+}
 .dark .slider-arrow { background: rgba(35,37,34,.92); color: var(--ink); }
 
 /* On mobile / touch screens, hide the < > buttons so users can swipe smoothly between photos */

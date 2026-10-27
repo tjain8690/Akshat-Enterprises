@@ -506,7 +506,6 @@ export function ProductsPage({
                   >
                     <div
                       className="product-image"
-                      onClick={() => handleNavigate(`/product-description?id=${product.id}`)}
                       style={{ cursor: 'pointer' }}
                     >
                       {product.tag && <span className="product-tag">{product.tag}</span>}
