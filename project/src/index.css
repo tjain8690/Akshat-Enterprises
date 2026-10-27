@@ -5588,7 +5588,7 @@ h2 { font-size: clamp(43px, 5vw, 71px); margin: 18px 0 0; }.heading-note { max-w
 }
 
 /* ==========================================================================
-   OFFICIAL BRAND LOGO STYLES (AE-logo.png)
+   OFFICIAL BRAND LOGO STYLES (Akshat_logo.png)
    ========================================================================== */
 
 .porto-brand-logo-img {
@@ -5598,7 +5598,7 @@ h2 { font-size: clamp(43px, 5vw, 71px); margin: 18px 0 0; }.heading-note { max-w
   max-width: 220px;
   object-fit: contain;
   display: block;
-  mix-blend-mode: multiply;
+  border-radius: 8px;
   transition: transform 0.2s ease, opacity 0.2s ease;
 }
 .porto-brand-logo-img:hover {
@@ -5606,19 +5606,13 @@ h2 { font-size: clamp(43px, 5vw, 71px); margin: 18px 0 0; }.heading-note { max-w
 }
 .dark .porto-brand-logo-img {
   mix-blend-mode: normal;
-  background: #ffffff;
-  padding: 3px 8px;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .porto-brand-logo-img.footer-logo {
   height: 46px;
-  background: #ffffff;
-  padding: 4px 10px;
   border-radius: 8px;
   mix-blend-mode: normal;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .porto-drawer-logo-img {
@@ -5627,14 +5621,11 @@ h2 { font-size: clamp(43px, 5vw, 71px); margin: 18px 0 0; }.heading-note { max-w
   width: auto;
   max-width: 190px;
   object-fit: contain;
-  mix-blend-mode: multiply;
+  border-radius: 6px;
   display: block;
 }
 .dark .porto-drawer-logo-img {
   mix-blend-mode: normal;
-  background: #ffffff;
-  padding: 3px 8px;
-  border-radius: 6px;
 }
 
 .admin-gate-logo-img {
@@ -5642,15 +5633,12 @@ h2 { font-size: clamp(43px, 5vw, 71px); margin: 18px 0 0; }.heading-note { max-w
   width: auto;
   max-width: 260px;
   object-fit: contain;
-  mix-blend-mode: multiply;
+  border-radius: 10px;
   display: block;
   margin: 0 auto;
 }
 .admin-gate-wrap.dark .admin-gate-logo-img {
   mix-blend-mode: normal;
-  background: #ffffff;
-  padding: 5px 12px;
-  border-radius: 10px;
 }
 
 .admin-topbar-logo-img {
@@ -5658,14 +5646,11 @@ h2 { font-size: clamp(43px, 5vw, 71px); margin: 18px 0 0; }.heading-note { max-w
   width: auto;
   max-width: 190px;
   object-fit: contain;
-  mix-blend-mode: multiply;
+  border-radius: 6px;
   display: block;
 }
 .dark .admin-topbar-logo-img {
   mix-blend-mode: normal;
-  background: #ffffff;
-  padding: 3px 8px;
-  border-radius: 6px;
 }
 
 .site-header-logo-img {
@@ -5673,24 +5658,20 @@ h2 { font-size: clamp(43px, 5vw, 71px); margin: 18px 0 0; }.heading-note { max-w
   width: auto;
   max-width: 190px;
   object-fit: contain;
-  mix-blend-mode: multiply;
+  border-radius: 8px;
   display: block;
 }
 .dark .site-header-logo-img {
   mix-blend-mode: normal;
-  background: #ffffff;
-  padding: 3px 8px;
-  border-radius: 6px;
 }
 
 .site-footer-logo-img {
-  height: 44px;
+  height: 48px;
   width: auto;
   max-width: 190px;
   object-fit: contain;
-  background: #ffffff;
-  padding: 4px 10px;
   border-radius: 8px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
   mix-blend-mode: normal;
   display: block;
 }

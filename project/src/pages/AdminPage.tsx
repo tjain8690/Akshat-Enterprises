@@ -985,7 +985,7 @@ export function AdminPage({
       <div className={`admin-gate-wrap${dark ? ' dark' : ''}`}>
         <div className="admin-gate-card">
           <div className="admin-gate-top">
-            <img src="/AE-logo.png" alt="Akshat Enterprises Logo" className="admin-gate-logo-img" />
+            <img src="/Akshat_logo.png" alt="Akshat Enterprises Logo" className="admin-gate-logo-img" />
           </div>
 
           <div className="admin-gate-icon-circle">
@@ -1090,9 +1090,6 @@ export function AdminPage({
             <button type="button" className="admin-gate-back-btn" onClick={onNavigateHome}>
               <ArrowLeft size={14} /> Return to Store
             </button>
-            <div className="admin-gate-badge">
-              <Database size={12} /> Supabase Database Auth Active
-            </div>
           </div>
         </div>
       </div>
@@ -1127,7 +1124,7 @@ export function AdminPage({
             <ArrowLeft size={16} /> Store Front
           </button>
           <div className="admin-topbar-brand">
-            <img src="/AE-logo.png" alt="Akshat Enterprises Logo" className="admin-topbar-logo-img" />
+            <img src="/Akshat_logo.png" alt="Akshat Enterprises Logo" className="admin-topbar-logo-img" />
           </div>
         </div>
 

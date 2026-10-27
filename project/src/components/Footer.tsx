@@ -42,7 +42,7 @@ export function Footer({ onOpenLegal }: FooterProps) {
         <div className="footer-top">
           <div className="footer-brand">
             <Link to="/" className="brand" aria-label="Akshat Enterprises Home">
-              <img src="/AE-logo.png" alt="Akshat Enterprises" className="site-footer-logo-img" />
+              <img src="/Akshat_logo_reversed.png" alt="Akshat Enterprises" className="site-footer-logo-img" />
             </Link>
             <p>Wholesalers of safety shoes, jackets,<br />caps, gum boots &amp; workwear.</p>
           </div>
@@ -60,11 +60,17 @@ export function Footer({ onOpenLegal }: FooterProps) {
           </div>
           <div className="footer-visit">
             <span>Visit Us</span>
-            <a href="https://maps.google.com" target="_blank" rel="noreferrer"><MapPin size={16} /> Get Directions</a>
+            <a
+              href="https://www.google.com/maps/search/?api=1&query=Shop+No.+51,+Janta+Market,+Sector-23,+Turbhe,+Navi+Mumbai+-+400705"
+              target="_blank"
+              rel="noreferrer"
+            >
+              <MapPin size={16} /> Get Directions
+            </a>
             <p className="footer-address">
-              Shop No 2, Janta Market,<br />
-              Turbhe, Navi Mumbai<br />
-              Maharashtra 400705
+              Shop No. 51, Janta Market,<br />
+              Sector-23, Turbhe,<br />
+              Navi Mumbai – 400705
             </p>
           </div>
         </div>

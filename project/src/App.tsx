@@ -407,9 +407,12 @@ const isAdminPath = (path: string): boolean => {
   };
 
   // Search submit handler: switches to department and scrolls to footwear/category
-  const handleSearchSubmit = (e?: React.FormEvent) => {
+  const handleSearchSubmit = (e?: React.FormEvent, overrideQuery?: string) => {
     if (e) e.preventDefault();
-    const query = searchQuery.trim().toLowerCase();
+    const query = (overrideQuery ?? searchQuery).trim().toLowerCase();
+    if (overrideQuery !== undefined) {
+      setSearchQuery(overrideQuery);
+    }
 
     if (
       query.includes('shoe') ||
@@ -906,7 +909,10 @@ const isAdminPath = (path: string): boolean => {
             <button
               type="button"
               className="ax-icon-btn ax-menu-toggle"
-              onClick={() => setMenuOpen(!menuOpen)}
+              onClick={() => {
+                setMenuOpen(!menuOpen);
+                if (!menuOpen) setSearchOpen(false);
+              }}
               aria-label="Toggle navigation menu"
             >
               {menuOpen ? <X size={20} /> : <Menu size={20} />}
@@ -922,7 +928,7 @@ const isAdminPath = (path: string): boolean => {
             >
               <div className="ax-brand-group">
                 <img
-                  src="/AE-logo.png"
+                  src="/Akshat_logo.png"
                   alt="Akshat Enterprises"
                   className="ax-brand-ae"
                 />
@@ -1028,21 +1034,28 @@ const isAdminPath = (path: string): boolean => {
 
           {/* Right Header Action Icons */}
           <div className="ax-header-actions">
-            {/* Search Slot (Expands to the left into available space without hiding icons) */}
+            {/* Search Slot:
+                Desktop (>820px): Shows Search icon when closed; shows expanding slide pill when open (replaces button cleanly).
+                Mobile (<=820px): Shows the single navbar toggle icon (Search <-> X) with no extra background.
+            */}
             <div className="ax-search-slot">
-              {!searchOpen ? (
+              {/* Desktop Search Button (when search is closed) */}
+              {!searchOpen && (
                 <button
                   type="button"
-                  className="ax-icon-btn"
+                  className="ax-icon-btn ax-desktop-search-btn"
                   onClick={() => setSearchOpen(true)}
-                  aria-label="Toggle search catalog"
+                  aria-label="Search catalog"
                   title="Search catalog"
                 >
                   <Search size={19} />
                 </button>
-              ) : (
+              )}
+
+              {/* Desktop-only expanding pill (shown only on desktop when open, replaces the button cleanly) */}
+              {searchOpen && (
                 <form
-                  className="ax-search-slide-form"
+                  className="ax-search-slide-form ax-desktop-search-form"
                   onSubmit={(e) => {
                     handleSearchSubmit(e);
                     setSearchOpen(false);
@@ -1077,6 +1090,20 @@ const isAdminPath = (path: string): boolean => {
                   </button>
                 </form>
               )}
+
+              {/* Mobile-only navbar toggle button (single cross in navbar when open, search when closed) */}
+              <button
+                type="button"
+                className="ax-icon-btn ax-mobile-search-toggle"
+                onClick={() => {
+                  setSearchOpen(!searchOpen);
+                  if (!searchOpen) setMenuOpen(false);
+                }}
+                aria-label={searchOpen ? 'Close search' : 'Search catalog'}
+                title={searchOpen ? 'Close search' : 'Search catalog'}
+              >
+                {searchOpen ? <X size={20} /> : <Search size={19} />}
+              </button>
             </div>
 
             {/* Wishlist Icon with Dropdown on Hover */}
@@ -1190,7 +1217,57 @@ const isAdminPath = (path: string): boolean => {
             </button>
           </div>
         </div>
+
+        {/* Dedicated Mobile Search Panel (Clean full-width pill, black button/border, single navbar cross) */}
+        {searchOpen && (
+          <div className="ax-mobile-search-panel">
+            <form
+              className="ax-mobile-search-form"
+              onSubmit={(e) => {
+                handleSearchSubmit(e);
+                setSearchOpen(false);
+              }}
+            >
+              <div className="ax-mobile-search-pill">
+                <Search size={18} className="ax-mobile-search-icon" />
+                <input
+                  type="text"
+                  placeholder="Search safety shoes, jackets, boots..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  autoFocus
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    className="ax-mobile-search-clear"
+                    onClick={() => setSearchQuery('')}
+                    aria-label="Clear search input"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+                <button
+                  type="submit"
+                  className="ax-mobile-search-submit"
+                  aria-label="Search"
+                >
+                  <Search size={15} />
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
       </header>
+
+      {/* Dimmed backdrop when mobile search is active */}
+      {searchOpen && (
+        <div
+          className="ax-search-backdrop"
+          onClick={() => setSearchOpen(false)}
+          aria-hidden="true"
+        />
+      )}
 
       {/* ── Main App Content ── */}
       <main id="top" className="porto-main-content">
@@ -1674,7 +1751,7 @@ const isAdminPath = (path: string): boolean => {
           {/* Column 1: APEX Brand + Checkmarks */}
           <div className="ax-footer-brand">
             <div className="ax-brand-group" style={{ marginBottom: '16px' }}>
-              <img src="/AE-logo.png" alt="Akshat Enterprises" className="ax-footer-logo" />
+              <img src="/Akshat_logo_reversed.png" alt="Akshat Enterprises" className="ax-footer-logo" />
             </div>
 
             <ul className="ax-footer-checks">
@@ -1734,10 +1811,19 @@ const isAdminPath = (path: string): boolean => {
           <div>
             <h4>STORE VISIT</h4>
             <ul className="ax-footer-links">
-              <li><span>Shop 2, Janta Market</span></li>
-              <li><span>Turbhe, Navi Mumbai</span></li>
+              <li><span>Shop No. 51, Janta Market</span></li>
+              <li><span>Sector-23, Turbhe, Navi Mumbai – 400705</span></li>
               <li><span>Mon–Sat: 10am – 8pm</span></li>
-              <li><a href="https://maps.google.com" target="_blank" rel="noreferrer" style={{ color: 'var(--ax-accent)', fontWeight: 700 }}>Get Directions ↗</a></li>
+              <li>
+                <a
+                  href="https://www.google.com/maps/search/?api=1&query=Shop+No.+51,+Janta+Market,+Sector-23,+Turbhe,+Navi+Mumbai+-+400705"
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ color: 'var(--ax-accent)', fontWeight: 700 }}
+                >
+                  Get Directions ↗
+                </a>
+              </li>
             </ul>
           </div>
 
@@ -1917,7 +2003,7 @@ const isAdminPath = (path: string): boolean => {
           >
             <div className="porto-categories-drawer-header">
               <div className="porto-drawer-brand">
-                <img src="/AE-logo.png" alt="Akshat Enterprises" className="porto-drawer-logo-img" />
+                <img src="/Akshat_logo.png" alt="Akshat Enterprises" className="porto-drawer-logo-img" />
               </div>
               <button
                 type="button"
@@ -2040,7 +2126,7 @@ const isAdminPath = (path: string): boolean => {
             <div className="porto-categories-drawer-footer">
               <div className="porto-drawer-footer-store">
                 <strong>Akshat Enterprises</strong>
-                <small>Shop No. 12, Janta Market, Turbhe</small>
+                <small>Shop No. 51, Janta Market, Sector-23, Turbhe</small>
               </div>
               <a
                 href={whatsappLink('Hi Akshat Enterprises, I have an enquiry about your catalog.')}

@@ -24,7 +24,7 @@ export function Header({ dark, setDark, menuOpen, setMenuOpen, cart }: HeaderPro
 
       <header className="site-header">
         <Link to="/" className="brand" aria-label="Akshat Enterprises Home">
-          <img src="/AE-logo.png" alt="Akshat Enterprises" className="site-header-logo-img" />
+          <img src="/Akshat_logo.png" alt="Akshat Enterprises" className="site-header-logo-img" />
         </Link>
 
         <nav className={`main-nav${menuOpen ? ' open' : ''}`}>

@@ -164,7 +164,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({
 
               <h3>1. Dispatch Timelines</h3>
               <p>
-                All orders are packed and dispatched directly from our warehouse located at <strong>Shop No. 2, Janta Market, Turbhe, Navi Mumbai, Maharashtra 400705</strong>. Standard orders are dispatched within <strong>24 to 48 business hours</strong>.
+                All orders are packed and dispatched directly from our warehouse located at <strong>Shop No. 51, Janta Market, Sector-23, Turbhe, Navi Mumbai, Maharashtra 400705</strong>. Standard orders are dispatched within <strong>24 to 48 business hours</strong>.
               </p>
 
               <h3>2. Delivery &amp; Tracking</h3>
@@ -209,7 +209,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({
                   <MapPin size={18} />
                   <div>
                     <strong>Registered Address:</strong>
-                    <span>Shop No 2, Janta Market, Sector 19, Turbhe, Navi Mumbai, Maharashtra – 400705, India</span>
+                    <span>Shop No. 51, Janta Market, Sector-23, Turbhe, Navi Mumbai, Maharashtra – 400705, India</span>
                   </div>
                 </div>
                 <div className="contact-row">
